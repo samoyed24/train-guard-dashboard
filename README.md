@@ -13,6 +13,14 @@
 - Frontend: Vue 3 + Element Plus + pnpm + Vite
 - Backend: Python + Flask + PostgreSQL + Redis
 
+## 在线试用
+
+- 试用网址：https://samoyed24.github.io/train-guard-dashboard/
+- 用户名（邮箱）：admin@train-guard.local
+- 密码：123456
+
+说明：在线试用站点默认使用 Mock 接口数据。
+
 ## 目录
 
 - `frontend/` 前端项目

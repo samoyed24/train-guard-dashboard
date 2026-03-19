@@ -2,6 +2,14 @@
 
 技术栈：Vue3 + Element Plus + pnpm + Vite
 
+## 在线试用
+
+- 试用网址：https://samoyed24.github.io/train-guard-dashboard/
+- 用户名（邮箱）：admin@train-guard.local
+- 密码：123456
+
+说明：试用站点固定使用 Mock 模式。
+
 ## 启动
 
 ```bash
