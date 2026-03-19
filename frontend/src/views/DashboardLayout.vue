@@ -23,17 +23,6 @@
       <header class="dashboard-topbar">
         <div class="topbar-heading">
           <p class="topbar-kicker">Train Guard Dashboard</p>
-          <h2>{{ pageTitle }}</h2>
-        </div>
-        <div class="topbar-user">
-          <span class="user-badge">{{ userInitial }}</span>
-          <span class="user-name">{{ auth.user?.name || "未登录" }}</span>
-          <el-button size="small" class="ghost-btn" @click="logout">退出</el-button>
-        </div>
-      </header>
-
-      <section class="dashboard-content">
-        <nav class="dashboard-breadcrumb-wrap" aria-label="Breadcrumb">
           <el-breadcrumb class="dashboard-breadcrumb" separator="/">
             <el-breadcrumb-item
               v-for="(item, index) in breadcrumbItems"
@@ -48,8 +37,16 @@
               <span v-else>{{ item.title }}</span>
             </el-breadcrumb-item>
           </el-breadcrumb>
-        </nav>
+          <h2>{{ pageTitle }}</h2>
+        </div>
+        <div class="topbar-user">
+          <span class="user-badge">{{ userInitial }}</span>
+          <span class="user-name">{{ auth.user?.name || "未登录" }}</span>
+          <el-button size="small" class="ghost-btn" @click="logout">退出</el-button>
+        </div>
+      </header>
 
+      <section class="dashboard-content">
         <router-view v-slot="{ Component, route: childRoute }">
           <transition name="page-fade-slide" mode="out-in">
             <component :is="Component" :key="childRoute.fullPath" />
