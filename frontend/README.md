@@ -35,7 +35,13 @@ cp .env.example .env.local
 ```env
 VITE_API_MODE=mock
 VITE_API_BASE_URL=http://localhost:8000
+VITE_MOCK_LOGIN_EMAIL=
+VITE_MOCK_LOGIN_PASSWORD=
 ```
+
+其中 `VITE_MOCK_LOGIN_EMAIL` / `VITE_MOCK_LOGIN_PASSWORD` 为可选项：
+- 配置后，登录页会在 Mock 模式下自动填充该账号密码。
+- GitHub Pages 的 `dev` 分支自动部署会注入默认值（`admin@train-guard.local` / `123456`）。
 
 3) 切到真实后端：
 

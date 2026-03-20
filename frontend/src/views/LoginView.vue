@@ -40,7 +40,12 @@ import { useAuthStore } from "../stores/auth";
 
 const router = useRouter();
 const auth = useAuthStore();
-const form = reactive({ email: "", password: "" });
+
+const isMockMode = String(import.meta.env.VITE_API_MODE ?? "mock").toLowerCase() === "mock";
+const prefillEmail = isMockMode ? String(import.meta.env.VITE_MOCK_LOGIN_EMAIL ?? "") : "";
+const prefillPassword = isMockMode ? String(import.meta.env.VITE_MOCK_LOGIN_PASSWORD ?? "") : "";
+
+const form = reactive({ email: prefillEmail, password: prefillPassword });
 
 const onLogin = async () => {
   try {
