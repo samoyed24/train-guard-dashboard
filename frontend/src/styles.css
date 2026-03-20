@@ -956,6 +956,39 @@ a {
   font-size: 0.9rem;
 }
 
+.team-stat-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.team-permission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.team-permission-card {
+  border: 1px solid rgba(166, 192, 227, 0.58);
+  border-radius: 14px;
+  background: rgba(234, 244, 255, 0.72);
+  padding: 12px;
+}
+
+.team-permission-card h4 {
+  margin: 0;
+  color: #173a61;
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+}
+
+.team-permission-card ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 7px;
+  color: #345a81;
+  font-size: 0.88rem;
+}
+
 .mono-text {
   font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
@@ -1040,6 +1073,14 @@ a {
 
   .metric-quick-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .team-stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .team-permission-grid {
+    grid-template-columns: 1fr;
   }
 
   .auth-card {

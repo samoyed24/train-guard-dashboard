@@ -10,6 +10,7 @@
       <el-menu class="nav-menu" :default-active="route.path" router>
         <el-menu-item index="/dashboard">概览看板</el-menu-item>
         <el-menu-item index="/apps">应用管理</el-menu-item>
+        <el-menu-item index="/team">团队管理</el-menu-item>
         <el-menu-item index="/configs">配置中心</el-menu-item>
         <el-menu-item index="/metrics">训练数据</el-menu-item>
       </el-menu>

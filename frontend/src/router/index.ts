@@ -8,6 +8,7 @@ import DashboardHomeView from "../views/DashboardHomeView.vue";
 import ApplicationsView from "../views/ApplicationsView.vue";
 import ConfigCenterView from "../views/ConfigCenterView.vue";
 import MetricsView from "../views/MetricsView.vue";
+import TeamManagementView from "../views/TeamManagementView.vue";
 
 const routes = [
   { path: "/login", component: LoginView, meta: { title: "登录" } },
@@ -20,6 +21,7 @@ const routes = [
       { path: "", redirect: "/dashboard" },
       { path: "dashboard", component: DashboardHomeView, meta: { title: "概览看板" } },
       { path: "apps", component: ApplicationsView, meta: { title: "应用管理" } },
+      { path: "team", component: TeamManagementView, meta: { title: "团队管理" } },
       { path: "configs", component: ConfigCenterView, meta: { title: "配置中心" } },
       { path: "metrics", component: MetricsView, meta: { title: "训练数据" } },
     ],

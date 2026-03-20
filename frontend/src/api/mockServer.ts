@@ -66,6 +66,39 @@ interface MockMetricSeriesPoint {
   event_time: string;
 }
 
+type TeamRole = "team_admin" | "team_member";
+
+interface MockTeam {
+  id: number;
+  name: string;
+  description: string;
+  created_by: number;
+  created_at: string;
+}
+
+interface MockTeamMember {
+  id: number;
+  team_id: number;
+  user_id: number;
+  role: TeamRole;
+  joined_at: string;
+}
+
+type TeamInviteStatus = "pending" | "accepted" | "revoked";
+
+interface MockTeamInvite {
+  id: number;
+  team_id: number;
+  email: string;
+  role: TeamRole;
+  invited_by: number;
+  status: TeamInviteStatus;
+  token: string;
+  created_at: string;
+  accepted_by: number | null;
+  accepted_at: string | null;
+}
+
 interface AuthSuccess {
   ok: true;
   user: MockUser;
@@ -134,6 +167,52 @@ const state = {
       password: "123456",
       created_at: nowIso(),
     } as MockUser,
+    {
+      id: 2,
+      email: "member@train-guard.local",
+      name: "Operator",
+      password: "123456",
+      created_at: nowIso(),
+    } as MockUser,
+  ],
+  teams: [
+    {
+      id: 1,
+      name: "Train Guard Core Team",
+      description: "负责训练平台运营、配置治理与指标回传。",
+      created_by: 1,
+      created_at: nowIso(),
+    } as MockTeam,
+  ],
+  teamMembers: [
+    {
+      id: 1,
+      team_id: 1,
+      user_id: 1,
+      role: "team_admin",
+      joined_at: nowIso(),
+    } as MockTeamMember,
+    {
+      id: 2,
+      team_id: 1,
+      user_id: 2,
+      role: "team_member",
+      joined_at: nowIso(),
+    } as MockTeamMember,
+  ],
+  teamInvites: [
+    {
+      id: 1,
+      team_id: 1,
+      email: "new.joiner@train-guard.local",
+      role: "team_member",
+      invited_by: 1,
+      status: "pending",
+      token: `invite_${randomHex(20)}`,
+      created_at: nowIso(),
+      accepted_by: null,
+      accepted_at: null,
+    } as MockTeamInvite,
   ],
   apps: [
     {
@@ -239,7 +318,10 @@ const state = {
   blacklistedTokens: new Set<string>(),
   activeConfigCache: new Map<string, JsonObject>(),
   nextIds: {
-    user: 2,
+    user: 3,
+    team: 2,
+    teamMember: 3,
+    teamInvite: 2,
     app: 2,
     config: 3,
     run: 3,
@@ -283,6 +365,236 @@ export async function handleMockRequest(request: MockRequest): Promise<MockRespo
     state.blacklistedTokens.add(auth.token);
     state.issuedTokens.delete(auth.token);
     return ok({ message: "ok" });
+  }
+
+  if (method === "GET" && path === "/api/team/current") {
+    const auth = requireAuth(request);
+    if (!auth.ok) return auth.response;
+
+    const membership = findMembershipByUserId(auth.user.id);
+    if (!membership) {
+      return fail(404, "You have not joined any team");
+    }
+
+    const team = state.teams.find((item) => item.id === membership.team_id);
+    if (!team) {
+      return fail(404, "Team not found");
+    }
+
+    return ok(buildTeamPayload(team, auth.user.id));
+  }
+
+  if (method === "POST" && path === "/api/team/join") {
+    const auth = requireAuth(request);
+    if (!auth.ok) return auth.response;
+
+    const payload = asObject(request.body);
+    const token = asString(payload?.token).trim();
+    if (!token) {
+      return fail(400, "token required");
+    }
+
+    const invite = state.teamInvites.find((item) => item.token === token);
+    if (!invite) {
+      return fail(404, "Invite token not found");
+    }
+
+    if (invite.status !== "pending") {
+      return fail(409, "Invite is no longer active");
+    }
+
+    if (invite.email !== auth.user.email) {
+      return fail(403, "Invite email does not match current account");
+    }
+
+    const existingMembership = findMembershipByUserId(auth.user.id);
+    if (existingMembership && existingMembership.team_id === invite.team_id) {
+      return fail(409, "Already in team");
+    }
+
+    invite.status = "accepted";
+    invite.accepted_by = auth.user.id;
+    invite.accepted_at = nowIso();
+
+    state.teamMembers.push({
+      id: state.nextIds.teamMember++,
+      team_id: invite.team_id,
+      user_id: auth.user.id,
+      role: invite.role,
+      joined_at: nowIso(),
+    });
+
+    return ok({ message: "joined", team_id: invite.team_id });
+  }
+
+  if (method === "POST" && path === "/api/team/invites") {
+    const auth = requireAuth(request);
+    if (!auth.ok) return auth.response;
+
+    const adminContext = requireTeamAdmin(auth.user.id);
+    if (!adminContext.ok) return adminContext.response;
+
+    const payload = asObject(request.body);
+    const email = asString(payload?.email).trim().toLowerCase();
+    const role = normalizeTeamRole(payload?.role) ?? "team_member";
+
+    if (!email || !email.includes("@")) {
+      return fail(400, "valid email required");
+    }
+
+    const alreadyMember = findMemberByTeamAndEmail(adminContext.team.id, email);
+    if (alreadyMember) {
+      return fail(409, "User is already in the team");
+    }
+
+    const pendingInvite = state.teamInvites.find(
+      (item) => item.team_id === adminContext.team.id && item.email === email && item.status === "pending",
+    );
+    if (pendingInvite) {
+      return ok({
+        invite_id: pendingInvite.id,
+        email: pendingInvite.email,
+        role: pendingInvite.role,
+        status: pendingInvite.status,
+        token: pendingInvite.token,
+        created_at: pendingInvite.created_at,
+      });
+    }
+
+    const invite: MockTeamInvite = {
+      id: state.nextIds.teamInvite++,
+      team_id: adminContext.team.id,
+      email,
+      role,
+      invited_by: auth.user.id,
+      status: "pending",
+      token: `invite_${randomHex(20)}`,
+      created_at: nowIso(),
+      accepted_by: null,
+      accepted_at: null,
+    };
+    state.teamInvites.push(invite);
+
+    return ok(
+      {
+        invite_id: invite.id,
+        email: invite.email,
+        role: invite.role,
+        status: invite.status,
+        token: invite.token,
+        created_at: invite.created_at,
+      },
+      201,
+    );
+  }
+
+  const revokeInviteMatch = path.match(/^\/api\/team\/invites\/(\d+)\/revoke$/);
+  if (revokeInviteMatch && method === "POST") {
+    const auth = requireAuth(request);
+    if (!auth.ok) return auth.response;
+
+    const adminContext = requireTeamAdmin(auth.user.id);
+    if (!adminContext.ok) return adminContext.response;
+
+    const inviteId = Number(revokeInviteMatch[1]);
+    const invite = state.teamInvites.find((item) => item.id === inviteId && item.team_id === adminContext.team.id);
+    if (!invite) {
+      return fail(404, "Invite not found");
+    }
+
+    if (invite.status !== "pending") {
+      return fail(409, "Only pending invite can be revoked");
+    }
+
+    invite.status = "revoked";
+    return ok({ message: "revoked" });
+  }
+
+  const acceptInviteMatch = path.match(/^\/api\/team\/invites\/(\d+)\/accept$/);
+  if (acceptInviteMatch && method === "POST") {
+    const auth = requireAuth(request);
+    if (!auth.ok) return auth.response;
+
+    const inviteId = Number(acceptInviteMatch[1]);
+    const invite = state.teamInvites.find((item) => item.id === inviteId);
+    if (!invite) {
+      return fail(404, "Invite not found");
+    }
+
+    if (invite.status !== "pending") {
+      return fail(409, "Invite is no longer active");
+    }
+
+    if (auth.user.email !== invite.email) {
+      return fail(403, "This invite does not match current account");
+    }
+
+    const existingMembership = findMembershipByUserId(auth.user.id);
+    if (existingMembership && existingMembership.team_id === invite.team_id) {
+      return fail(409, "Already in team");
+    }
+
+    invite.status = "accepted";
+    invite.accepted_by = auth.user.id;
+    invite.accepted_at = nowIso();
+
+    state.teamMembers.push({
+      id: state.nextIds.teamMember++,
+      team_id: invite.team_id,
+      user_id: auth.user.id,
+      role: invite.role,
+      joined_at: nowIso(),
+    });
+
+    return ok({ message: "accepted", team_id: invite.team_id });
+  }
+
+  const updateMemberRoleMatch = path.match(/^\/api\/team\/members\/(\d+)\/role$/);
+  if (updateMemberRoleMatch && method === "PATCH") {
+    const auth = requireAuth(request);
+    if (!auth.ok) return auth.response;
+
+    const adminContext = requireTeamAdmin(auth.user.id);
+    if (!adminContext.ok) return adminContext.response;
+
+    const memberId = Number(updateMemberRoleMatch[1]);
+    const role = normalizeTeamRole(asObject(request.body)?.role);
+    if (!role) {
+      return fail(400, "invalid role");
+    }
+
+    const member = state.teamMembers.find((item) => item.id === memberId && item.team_id === adminContext.team.id);
+    if (!member) {
+      return fail(404, "Member not found");
+    }
+
+    member.role = role;
+    return ok({ message: "updated", role });
+  }
+
+  const removeMemberMatch = path.match(/^\/api\/team\/members\/(\d+)$/);
+  if (removeMemberMatch && method === "DELETE") {
+    const auth = requireAuth(request);
+    if (!auth.ok) return auth.response;
+
+    const adminContext = requireTeamAdmin(auth.user.id);
+    if (!adminContext.ok) return adminContext.response;
+
+    const memberId = Number(removeMemberMatch[1]);
+    const memberIndex = state.teamMembers.findIndex(
+      (item) => item.id === memberId && item.team_id === adminContext.team.id,
+    );
+    if (memberIndex < 0) {
+      return fail(404, "Member not found");
+    }
+
+    const member = state.teamMembers[memberIndex];
+    if (member.user_id === auth.user.id) {
+      return fail(409, "Cannot remove yourself");
+    }
+
+    state.teamMembers.splice(memberIndex, 1);
+    return ok({ message: "removed" });
   }
 
   if (method === "GET" && path === "/api/apps") {
@@ -675,6 +987,103 @@ function requireAppAuth(request: MockRequest, query: URLSearchParams): AppAuthRe
 
 function findOwnedApp(appPk: number, userId: number): MockApp | undefined {
   return state.apps.find((item) => item.id === appPk && item.created_by === userId);
+}
+
+function findMembershipByUserId(userId: number): MockTeamMember | undefined {
+  return state.teamMembers.find((item) => item.user_id === userId);
+}
+
+function findMemberByTeamAndEmail(teamId: number, email: string): MockTeamMember | undefined {
+  const user = state.users.find((item) => item.email === email);
+  if (!user) {
+    return undefined;
+  }
+  return state.teamMembers.find((item) => item.team_id === teamId && item.user_id === user.id);
+}
+
+function normalizeTeamRole(value: unknown): TeamRole | null {
+  if (value === "team_admin" || value === "team_member") {
+    return value;
+  }
+  return null;
+}
+
+function requireTeamAdmin(userId: number):
+  | { ok: true; team: MockTeam; membership: MockTeamMember }
+  | { ok: false; response: MockResponse } {
+  const membership = findMembershipByUserId(userId);
+  if (!membership) {
+    return { ok: false, response: fail(403, "Not in team") };
+  }
+
+  const team = state.teams.find((item) => item.id === membership.team_id);
+  if (!team) {
+    return { ok: false, response: fail(404, "Team not found") };
+  }
+
+  if (membership.role !== "team_admin") {
+    return { ok: false, response: fail(403, "Admin role required") };
+  }
+
+  return { ok: true, team, membership };
+}
+
+function getTeamPermissions(role: TeamRole) {
+  const isAdmin = role === "team_admin";
+  return {
+    manage_members: isAdmin,
+    invite_members: isAdmin,
+    manage_roles: isAdmin,
+    view_audit: true,
+  };
+}
+
+function buildTeamPayload(team: MockTeam, currentUserId: number) {
+  const myMembership = state.teamMembers.find((item) => item.team_id === team.id && item.user_id === currentUserId);
+  if (!myMembership) {
+    return null;
+  }
+
+  const members = state.teamMembers
+    .filter((item) => item.team_id === team.id)
+    .map((item) => {
+      const user = state.users.find((userItem) => userItem.id === item.user_id);
+      return {
+        id: item.id,
+        user_id: item.user_id,
+        name: user?.name ?? `User-${item.user_id}`,
+        email: user?.email ?? "unknown",
+        role: item.role,
+        joined_at: item.joined_at,
+      };
+    })
+    .sort((a, b) => a.id - b.id);
+
+  const invites = state.teamInvites
+    .filter((item) => item.team_id === team.id)
+    .sort((a, b) => b.id - a.id)
+    .map((item) => ({
+      id: item.id,
+      email: item.email,
+      role: item.role,
+      status: item.status,
+      token: item.token,
+      created_at: item.created_at,
+      accepted_at: item.accepted_at,
+    }));
+
+  return {
+    team: {
+      id: team.id,
+      name: team.name,
+      description: team.description,
+      created_at: team.created_at,
+    },
+    my_role: myMembership.role,
+    permissions: getTeamPermissions(myMembership.role),
+    members,
+    invites,
+  };
 }
 
 function toAppListItem(app: MockApp) {
