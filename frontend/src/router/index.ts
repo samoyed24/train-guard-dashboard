@@ -4,6 +4,7 @@ import { useAuthStore } from "../stores/auth";
 import DashboardLayout from "../views/DashboardLayout.vue";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
+import DashboardHomeView from "../views/DashboardHomeView.vue";
 import ApplicationsView from "../views/ApplicationsView.vue";
 import ConfigCenterView from "../views/ConfigCenterView.vue";
 import MetricsView from "../views/MetricsView.vue";
@@ -16,7 +17,8 @@ const routes = [
     component: DashboardLayout,
     meta: { requiresAuth: true, title: "控制台" },
     children: [
-      { path: "", redirect: "/apps" },
+      { path: "", redirect: "/dashboard" },
+      { path: "dashboard", component: DashboardHomeView, meta: { title: "概览看板" } },
       { path: "apps", component: ApplicationsView, meta: { title: "应用管理" } },
       { path: "configs", component: ConfigCenterView, meta: { title: "配置中心" } },
       { path: "metrics", component: MetricsView, meta: { title: "训练数据" } },
@@ -46,7 +48,7 @@ router.beforeEach(async (to) => {
   }
 
   if ((to.path === "/login" || to.path === "/register") && token) {
-    return "/apps";
+    return "/dashboard";
   }
 
   return true;

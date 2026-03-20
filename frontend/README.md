@@ -54,6 +54,7 @@ VITE_API_BASE_URL=http://localhost:8000
 
 ## 页面
 
+- 概览看板 `/dashboard`
 - 登录 `/login`
 - 注册 `/register`
 - 应用管理 `/apps`
