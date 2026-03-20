@@ -91,3 +91,12 @@ VITE_API_BASE_URL=http://localhost:8000
 - 部署目标：GitHub Pages（通过 GitHub Actions Artifact 发布）
 
 首次使用时，请在仓库 `Settings -> Pages` 中确认 Source 为 `GitHub Actions`。
+
+## dev 服务器部署构建
+
+当 `dev` 分支触发服务器部署工作流时，前端镜像会以真实接口模式构建：
+
+- `VITE_API_MODE=real`
+- `VITE_API_BASE_URL=${DEV_FRONTEND_API_BASE_URL}`
+
+这样开发服务器上的前端会直接请求真实后端，而不是 Mock 数据。

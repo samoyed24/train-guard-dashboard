@@ -107,3 +107,45 @@ Agent 侧（app_id/app_secret 鉴权）：
 4. Agent 上报数据到 `server.url`（可使用 query 传鉴权）：
    - `http://localhost:8000/api/metrics/ingest?app_id=...&app_secret=...`
 
+## dev 分支自动部署（镜像构建 + 开发服务器部署）
+
+仓库已新增工作流：`.github/workflows/deploy-dev-server.yml`
+
+- 触发条件：`push` 到 `dev` 分支（或手动 `workflow_dispatch`）
+- 构建内容：
+  - 后端镜像：`<ACR_REGISTRY>/<ACR_NAMESPACE>/train-guard-dashboard/backend:dev`
+  - 前端镜像：`<ACR_REGISTRY>/<ACR_NAMESPACE>/train-guard-dashboard/frontend:dev`
+- 前端构建模式：固定 `VITE_API_MODE=real`（开发服务器使用真实后端）
+- 部署方式：CI 通过 SSH 登录开发机，执行 `docker compose up -d`
+
+### 需要配置的 GitHub Secrets
+
+- `DEV_ACR_REGISTRY`：阿里云 ACR Registry（例如 `registry.cn-hangzhou.aliyuncs.com`）
+- `DEV_ACR_NAMESPACE`：ACR 命名空间
+- `DEV_ACR_USERNAME`：ACR 用户名
+- `DEV_ACR_PASSWORD`：ACR 密码/令牌
+- `DEV_BACKEND_REPOSITORY`：后端镜像仓库名（例如 `devserver-backend`）
+- `DEV_FRONTEND_REPOSITORY`：前端镜像仓库名（例如 `devserver-frontend`）
+- `DEV_SERVER_HOST`：开发机地址
+- `DEV_SERVER_PORT`：SSH 端口（可选，默认 `22`）
+- `DEV_SERVER_USER`：SSH 用户
+- `DEV_SERVER_SSH_KEY`：私钥（用于 SSH 登录）
+- `DEV_DEPLOY_PATH`：服务器部署目录（例如 `/opt/train-guard-dashboard`）
+- `DEV_FRONTEND_API_BASE_URL`：前端真实 API 地址（例如 `http://<dev-host>:8000`）
+- `DEV_SECRET_KEY`：后端密钥
+- `DEV_CORS_ORIGINS`：允许跨域来源（例如 `http://<dev-host>`）
+- `DEV_POSTGRES_PASSWORD`：数据库密码
+- `DEV_POSTGRES_DB`：数据库名（可选，默认 `train_guard`）
+- `DEV_POSTGRES_USER`：数据库用户（可选，默认 `postgres`）
+- `DEV_POSTGRES_IMAGE`：PostgreSQL 镜像（建议填你 ACR 内的镜像）
+- `DEV_REDIS_IMAGE`：Redis 镜像（建议填你 ACR 内的镜像）
+- `DEV_FRONTEND_PORT`：前端对外端口（可选，默认 `80`）
+- `DEV_BACKEND_PORT`：后端对外端口（可选，默认 `8000`）
+- `DEV_JWT_EXPIRES_MINUTES`：JWT 过期时间（可选，默认 `120`）
+
+### 开发机前置要求
+
+- 已安装 Docker + Docker Compose（`docker compose`）
+- `DEV_SERVER_USER` 对部署目录有读写权限
+- 开发机可访问阿里云 ACR，并可通过 `docker login <DEV_ACR_REGISTRY>` 拉取镜像
+- ACR 中需要提前创建 `DEV_BACKEND_REPOSITORY` / `DEV_FRONTEND_REPOSITORY` 两个仓库

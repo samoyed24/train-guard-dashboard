@@ -1,0 +1,182 @@
+name: Build and Deploy Dev Environment
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dev-server
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        env:
+          DEV_ACR_REGISTRY: ${{ secrets.DEV_ACR_REGISTRY }}
+          DEV_ACR_NAMESPACE: ${{ secrets.DEV_ACR_NAMESPACE }}
+          DEV_ACR_USERNAME: ${{ secrets.DEV_ACR_USERNAME }}
+          DEV_ACR_PASSWORD: ${{ secrets.DEV_ACR_PASSWORD }}
+          DEV_BACKEND_REPOSITORY: ${{ secrets.DEV_BACKEND_REPOSITORY }}
+          DEV_FRONTEND_REPOSITORY: ${{ secrets.DEV_FRONTEND_REPOSITORY }}
+          DEV_SERVER_HOST: ${{ secrets.DEV_SERVER_HOST }}
+          DEV_SERVER_USER: ${{ secrets.DEV_SERVER_USER }}
+          DEV_SERVER_SSH_KEY: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          DEV_DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
+          DEV_FRONTEND_API_BASE_URL: ${{ secrets.DEV_FRONTEND_API_BASE_URL }}
+          DEV_SECRET_KEY: ${{ secrets.DEV_SECRET_KEY }}
+          DEV_CORS_ORIGINS: ${{ secrets.DEV_CORS_ORIGINS }}
+          DEV_POSTGRES_PASSWORD: ${{ secrets.DEV_POSTGRES_PASSWORD }}
+          DEV_POSTGRES_IMAGE: ${{ secrets.DEV_POSTGRES_IMAGE }}
+          DEV_REDIS_IMAGE: ${{ secrets.DEV_REDIS_IMAGE }}
+        run: |
+          [[ -n "${DEV_ACR_REGISTRY}" ]] || { echo "Missing required secret: DEV_ACR_REGISTRY"; exit 1; }
+          [[ -n "${DEV_ACR_NAMESPACE}" ]] || { echo "Missing required secret: DEV_ACR_NAMESPACE"; exit 1; }
+          [[ -n "${DEV_ACR_USERNAME}" ]] || { echo "Missing required secret: DEV_ACR_USERNAME"; exit 1; }
+          [[ -n "${DEV_ACR_PASSWORD}" ]] || { echo "Missing required secret: DEV_ACR_PASSWORD"; exit 1; }
+          [[ -n "${DEV_BACKEND_REPOSITORY}" ]] || { echo "Missing required secret: DEV_BACKEND_REPOSITORY"; exit 1; }
+          [[ -n "${DEV_FRONTEND_REPOSITORY}" ]] || { echo "Missing required secret: DEV_FRONTEND_REPOSITORY"; exit 1; }
+          [[ -n "${DEV_SERVER_HOST}" ]] || { echo "Missing required secret: DEV_SERVER_HOST"; exit 1; }
+          [[ -n "${DEV_SERVER_USER}" ]] || { echo "Missing required secret: DEV_SERVER_USER"; exit 1; }
+          [[ -n "${DEV_SERVER_SSH_KEY}" ]] || { echo "Missing required secret: DEV_SERVER_SSH_KEY"; exit 1; }
+          [[ -n "${DEV_DEPLOY_PATH}" ]] || { echo "Missing required secret: DEV_DEPLOY_PATH"; exit 1; }
+          [[ -n "${DEV_FRONTEND_API_BASE_URL}" ]] || { echo "Missing required secret: DEV_FRONTEND_API_BASE_URL"; exit 1; }
+          [[ -n "${DEV_SECRET_KEY}" ]] || { echo "Missing required secret: DEV_SECRET_KEY"; exit 1; }
+          [[ -n "${DEV_CORS_ORIGINS}" ]] || { echo "Missing required secret: DEV_CORS_ORIGINS"; exit 1; }
+          [[ -n "${DEV_POSTGRES_PASSWORD}" ]] || { echo "Missing required secret: DEV_POSTGRES_PASSWORD"; exit 1; }
+          [[ -n "${DEV_POSTGRES_IMAGE}" ]] || { echo "Missing required secret: DEV_POSTGRES_IMAGE"; exit 1; }
+          [[ -n "${DEV_REDIS_IMAGE}" ]] || { echo "Missing required secret: DEV_REDIS_IMAGE"; exit 1; }
+
+      - name: Set image names
+        env:
+          DEV_ACR_REGISTRY: ${{ secrets.DEV_ACR_REGISTRY }}
+          DEV_ACR_NAMESPACE: ${{ secrets.DEV_ACR_NAMESPACE }}
+          DEV_BACKEND_REPOSITORY: ${{ secrets.DEV_BACKEND_REPOSITORY }}
+          DEV_FRONTEND_REPOSITORY: ${{ secrets.DEV_FRONTEND_REPOSITORY }}
+        run: |
+          REGISTRY="$(echo "${DEV_ACR_REGISTRY}" | tr -d '\r\n' | xargs)"
+          NAMESPACE="$(echo "${DEV_ACR_NAMESPACE}" | tr -d '\r\n' | xargs)"
+          BACKEND_REPO="$(echo "${DEV_BACKEND_REPOSITORY}" | tr -d '\r\n' | xargs)"
+          FRONTEND_REPO="$(echo "${DEV_FRONTEND_REPOSITORY}" | tr -d '\r\n' | xargs)"
+
+          REGISTRY="${REGISTRY#http://}"
+          REGISTRY="${REGISTRY#https://}"
+          REGISTRY="${REGISTRY%/}"
+          NAMESPACE="${NAMESPACE#/}"
+          NAMESPACE="${NAMESPACE%/}"
+          BACKEND_REPO="${BACKEND_REPO#/}"
+          BACKEND_REPO="${BACKEND_REPO%/}"
+          FRONTEND_REPO="${FRONTEND_REPO#/}"
+          FRONTEND_REPO="${FRONTEND_REPO%/}"
+
+          echo "BACKEND_IMAGE_REPO=${REGISTRY}/${NAMESPACE}/${BACKEND_REPO}" >> "$GITHUB_ENV"
+          echo "FRONTEND_IMAGE_REPO=${REGISTRY}/${NAMESPACE}/${FRONTEND_REPO}" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=${GITHUB_SHA}" >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Alibaba Cloud ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.DEV_ACR_REGISTRY }}
+          username: ${{ secrets.DEV_ACR_USERNAME }}
+          password: ${{ secrets.DEV_ACR_PASSWORD }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE_REPO }}:dev
+            ${{ env.BACKEND_IMAGE_REPO }}:${{ env.IMAGE_TAG }}
+
+      - name: Build and push frontend image (real API mode)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          build-args: |
+            VITE_API_MODE=real
+            VITE_API_BASE_URL=${{ secrets.DEV_FRONTEND_API_BASE_URL }}
+          tags: |
+            ${{ env.FRONTEND_IMAGE_REPO }}:dev
+            ${{ env.FRONTEND_IMAGE_REPO }}:${{ env.IMAGE_TAG }}
+
+      - name: Prepare deployment bundle
+        run: |
+          mkdir -p .deploy-bundle
+          cp docker-compose.dev.yml .deploy-bundle/docker-compose.dev.yml
+
+          cat > .deploy-bundle/.env <<ENVFILE
+          BACKEND_IMAGE=${{ env.BACKEND_IMAGE_REPO }}:dev
+          FRONTEND_IMAGE=${{ env.FRONTEND_IMAGE_REPO }}:dev
+          POSTGRES_IMAGE=${{ secrets.DEV_POSTGRES_IMAGE }}
+          REDIS_IMAGE=${{ secrets.DEV_REDIS_IMAGE }}
+
+          FRONTEND_PORT=${{ secrets.DEV_FRONTEND_PORT }}
+          BACKEND_PORT=${{ secrets.DEV_BACKEND_PORT }}
+
+          SECRET_KEY=${{ secrets.DEV_SECRET_KEY }}
+          JWT_EXPIRES_MINUTES=${{ secrets.DEV_JWT_EXPIRES_MINUTES }}
+          FLASK_DEBUG=0
+          CORS_ORIGINS=${{ secrets.DEV_CORS_ORIGINS }}
+
+          POSTGRES_DB=${{ secrets.DEV_POSTGRES_DB }}
+          POSTGRES_USER=${{ secrets.DEV_POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.DEV_POSTGRES_PASSWORD }}
+          ENVFILE
+
+      - name: Copy deploy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          port: ${{ secrets.DEV_SERVER_PORT || '22' }}
+          source: .deploy-bundle/*
+          target: ${{ env.DEPLOY_PATH }}
+          strip_components: 1
+
+      - name: Pull and restart services on server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          port: ${{ secrets.DEV_SERVER_PORT || '22' }}
+          script: |
+            set -euo pipefail
+            cd "${{ env.DEPLOY_PATH }}"
+            echo "${{ secrets.DEV_ACR_PASSWORD }}" | docker login "${{ secrets.DEV_ACR_REGISTRY }}" -u "${{ secrets.DEV_ACR_USERNAME }}" --password-stdin
+
+            docker compose --env-file .env -f docker-compose.dev.yml pull
+            docker compose --env-file .env -f docker-compose.dev.yml up -d --remove-orphans
+
+            for i in $(seq 1 10); do
+              if docker compose --env-file .env -f docker-compose.dev.yml run --rm backend flask --app run.py init-db; then
+                echo "Database initialized"
+                exit 0
+              fi
+              echo "init-db failed (attempt $i), retrying in 5s..."
+              sleep 5
+            done
+
+            echo "init-db failed after retries"
+            exit 1

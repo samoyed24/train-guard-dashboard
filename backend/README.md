@@ -32,6 +32,19 @@ uv run python run.py
 
 默认服务：`http://localhost:8000`
 
+## Docker 运行说明
+
+后端镜像文件：`backend/Dockerfile`
+
+- 容器默认监听：`8000`
+- `FLASK_DEBUG` 默认关闭（`0`）
+- 主要环境变量：
+  - `SECRET_KEY`
+  - `DATABASE_URL`
+  - `REDIS_URL`
+  - `CORS_ORIGINS`
+  - `JWT_EXPIRES_MINUTES`
+
 ## 常用 uv 命令
 
 ```bash
