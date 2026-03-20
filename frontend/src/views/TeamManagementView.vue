@@ -57,43 +57,45 @@
         </div>
       </div>
 
-      <el-table class="data-table" :data="teamStore.members" border empty-text="暂无成员">
-        <el-table-column prop="name" label="姓名" min-width="130" />
-        <el-table-column prop="email" label="邮箱" min-width="220" />
-        <el-table-column label="角色" width="160">
-          <template #default="scope">
-            <el-tag :type="scope.row.role === 'team_admin' ? 'success' : 'info'" effect="light">
-              {{ roleLabel(scope.row.role) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="joined_at" label="加入时间" min-width="170">
-          <template #default="scope">{{ formatDate(scope.row.joined_at) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" min-width="220">
-          <template #default="scope">
-            <div class="action-row">
-              <el-button
-                v-if="canManageRoles && !isSelf(scope.row.user_id)"
-                size="small"
-                @click="toggleRole(scope.row.id, scope.row.role)"
-              >
-                设为{{ scope.row.role === "team_admin" ? "成员" : "管理员" }}
-              </el-button>
-              <el-button
-                v-if="canManageMembers && !isSelf(scope.row.user_id)"
-                size="small"
-                type="danger"
-                plain
-                @click="removeMember(scope.row.id)"
-              >
-                移除
-              </el-button>
-              <span v-if="isSelf(scope.row.user_id)" class="table-empty-note">当前账号</span>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-wrap table-wrap--x">
+        <el-table class="data-table" :data="teamStore.members" border empty-text="暂无成员">
+          <el-table-column prop="name" label="姓名" min-width="130" />
+          <el-table-column prop="email" label="邮箱" min-width="220" />
+          <el-table-column label="角色" width="160">
+            <template #default="scope">
+              <el-tag :type="scope.row.role === 'team_admin' ? 'success' : 'info'" effect="light">
+                {{ roleLabel(scope.row.role) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="joined_at" label="加入时间" min-width="170">
+            <template #default="scope">{{ formatDate(scope.row.joined_at) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" min-width="220">
+            <template #default="scope">
+              <div class="action-row">
+                <el-button
+                  v-if="canManageRoles && !isSelf(scope.row.user_id)"
+                  size="small"
+                  @click="toggleRole(scope.row.id, scope.row.role)"
+                >
+                  设为{{ scope.row.role === "team_admin" ? "成员" : "管理员" }}
+                </el-button>
+                <el-button
+                  v-if="canManageMembers && !isSelf(scope.row.user_id)"
+                  size="small"
+                  type="danger"
+                  plain
+                  @click="removeMember(scope.row.id)"
+                >
+                  移除
+                </el-button>
+                <span v-if="isSelf(scope.row.user_id)" class="table-empty-note">当前账号</span>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
     </section>
 
     <section class="card" v-if="hasTeam">
@@ -104,50 +106,52 @@
         </div>
       </div>
 
-      <el-table class="data-table" :data="teamStore.invites" border empty-text="暂无邀请记录">
-        <el-table-column prop="email" label="邀请邮箱" min-width="220" />
-        <el-table-column label="角色" width="140">
-          <template #default="scope">{{ roleLabel(scope.row.role) }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="130">
-          <template #default="scope">
-            <el-tag :type="inviteStatusType(scope.row.status)" effect="light">{{ inviteStatusLabel(scope.row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="邀请码" min-width="240">
-          <template #default="scope">
-            <span class="mono-text">{{ scope.row.token }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" min-width="170">
-          <template #default="scope">{{ formatDate(scope.row.created_at) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" min-width="260">
-          <template #default="scope">
-            <div class="action-row">
-              <el-button size="small" @click="copyInviteToken(scope.row.token)">复制邀请码</el-button>
-              <el-button
-                v-if="canInvite && scope.row.status === 'pending'"
-                size="small"
-                type="danger"
-                plain
-                @click="revokeInvite(scope.row.id)"
-              >
-                撤销
-              </el-button>
-              <el-button
-                v-if="canAcceptInvite(scope.row)"
-                size="small"
-                type="primary"
-                plain
-                @click="acceptInvite(scope.row.id)"
-              >
-                接受邀请
-              </el-button>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-wrap table-wrap--x">
+        <el-table class="data-table" :data="teamStore.invites" border empty-text="暂无邀请记录">
+          <el-table-column prop="email" label="邀请邮箱" min-width="220" />
+          <el-table-column label="角色" width="140">
+            <template #default="scope">{{ roleLabel(scope.row.role) }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="130">
+            <template #default="scope">
+              <el-tag :type="inviteStatusType(scope.row.status)" effect="light">{{ inviteStatusLabel(scope.row.status) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="邀请码" min-width="240">
+            <template #default="scope">
+              <span class="mono-text">{{ scope.row.token }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="created_at" label="创建时间" min-width="170">
+            <template #default="scope">{{ formatDate(scope.row.created_at) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" min-width="260">
+            <template #default="scope">
+              <div class="action-row">
+                <el-button size="small" @click="copyInviteToken(scope.row.token)">复制邀请码</el-button>
+                <el-button
+                  v-if="canInvite && scope.row.status === 'pending'"
+                  size="small"
+                  type="danger"
+                  plain
+                  @click="revokeInvite(scope.row.id)"
+                >
+                  撤销
+                </el-button>
+                <el-button
+                  v-if="canAcceptInvite(scope.row)"
+                  size="small"
+                  type="primary"
+                  plain
+                  @click="acceptInvite(scope.row.id)"
+                >
+                  接受邀请
+                </el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
     </section>
 
     <section class="card" v-else>
