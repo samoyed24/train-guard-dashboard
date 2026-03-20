@@ -6,6 +6,7 @@ from .extensions import db
 from .routes.agent import agent_bp
 from .routes.apps import apps_bp
 from .routes.auth import auth_bp
+from .routes.dashboard import dashboard_bp
 from .timeseries import enable_timeseries_hypertable
 
 
@@ -22,6 +23,7 @@ def create_app() -> Flask:
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(apps_bp)
+    app.register_blueprint(dashboard_bp)
     app.register_blueprint(agent_bp)
 
     @app.cli.command("init-db")

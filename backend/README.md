@@ -54,6 +54,7 @@ uv sync
 - `GET /api/apps`
 - `POST /api/apps/:appId/configs`
 - `POST /api/apps/:appId/configs/:configId/publish`
+- `GET /api/dashboard/overview`
 - `POST /api/agent/config/fetch`（Agent 用）
 - `POST /api/metrics/ingest`（Agent 用）
 - `GET /api/apps/:appId/runs/:runId/metrics/series`
