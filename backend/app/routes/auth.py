@@ -1,7 +1,7 @@
 from flask import Blueprint, g, jsonify, request
 
 from ..extensions import db
-from ..models import User
+from ..models import Team, TeamMember, User
 from ..security import auth_required, blacklist_token, generate_token, hash_password, verify_password
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -23,6 +23,25 @@ def register():
     user = User(email=email, name=name, password_hash=hash_password(password))
     db.session.add(user)
     db.session.commit()
+
+    # Bootstrap a default team for the very first account so team invitation flow is usable immediately.
+    if Team.query.count() == 0:
+        team = Team(
+            name="Train Guard Core Team",
+            description="Default team for bootstrap and permissions setup.",
+            created_by=user.id,
+        )
+        db.session.add(team)
+        db.session.flush()
+        db.session.add(
+            TeamMember(
+                team_id=team.id,
+                user_id=user.id,
+                role="team_admin",
+            )
+        )
+        db.session.commit()
+
     return jsonify({"message": "ok"}), 201
 
 

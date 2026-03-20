@@ -79,3 +79,46 @@ class MetricSeriesPoint(db.Model):
     __table_args__ = (
         Index("ix_metric_series_run_metric_time", "run_id", "metric_name", "event_time"),
     )
+
+
+class Team(db.Model):
+    __tablename__ = "teams"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text, nullable=False, default="")
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class TeamMember(db.Model):
+    __tablename__ = "team_members"
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    role = db.Column(db.String(32), nullable=False, default="team_member")
+    joined_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("team_id", "user_id", name="uq_team_member_team_user"),
+    )
+
+
+class TeamInvite(db.Model):
+    __tablename__ = "team_invites"
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=False, index=True)
+    email = db.Column(db.String(255), nullable=False, index=True)
+    role = db.Column(db.String(32), nullable=False, default="team_member")
+    invited_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    status = db.Column(db.String(32), nullable=False, default="pending", index=True)
+    token = db.Column(db.String(128), nullable=False, unique=True, index=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    accepted_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    accepted_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("ix_team_invites_team_email_status", "team_id", "email", "status"),
+    )
