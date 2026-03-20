@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 
 from .extensions import db
@@ -62,3 +62,20 @@ class MetricRecord(db.Model):
     run_id = db.Column(db.Integer, db.ForeignKey("training_runs.id"), nullable=False, index=True)
     payload = db.Column(JSONB, nullable=False)
     received_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class MetricSeriesPoint(db.Model):
+    __tablename__ = "metric_series_points"
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.Integer, db.ForeignKey("training_runs.id"), nullable=False, index=True)
+    metric_name = db.Column(db.String(128), nullable=False, index=True)
+    metric_value = db.Column(db.Float, nullable=False)
+    step = db.Column(db.Integer, nullable=True)
+    epoch = db.Column(db.Integer, nullable=True)
+    event_time = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    recorded_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        Index("ix_metric_series_run_metric_time", "run_id", "metric_name", "event_time"),
+    )

@@ -6,6 +6,7 @@ from .extensions import db
 from .routes.agent import agent_bp
 from .routes.apps import apps_bp
 from .routes.auth import auth_bp
+from .timeseries import enable_timeseries_hypertable
 
 
 def create_app() -> Flask:
@@ -26,6 +27,9 @@ def create_app() -> Flask:
     @app.cli.command("init-db")
     def init_db_command():
         db.create_all()
-        print("Database initialized")
+        if enable_timeseries_hypertable():
+            print("Database initialized (TimescaleDB hypertable enabled)")
+        else:
+            print("Database initialized (fallback to plain metric_series_points table)")
 
     return app

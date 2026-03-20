@@ -56,6 +56,16 @@ interface MockMetricRecord {
   received_at: string;
 }
 
+interface MockMetricSeriesPoint {
+  id: number;
+  run_id: number;
+  metric_name: string;
+  metric_value: number;
+  step: number | null;
+  epoch: number | null;
+  event_time: string;
+}
+
 interface AuthSuccess {
   ok: true;
   user: MockUser;
@@ -224,6 +234,7 @@ const state = {
       },
     } as MockMetricRecord,
   ],
+  metricSeries: [] as MockMetricSeriesPoint[],
   issuedTokens: new Map<string, number>(),
   blacklistedTokens: new Set<string>(),
   activeConfigCache: new Map<string, JsonObject>(),
@@ -233,8 +244,11 @@ const state = {
     config: 3,
     run: 3,
     metric: 5,
+    metricSeries: 1,
   },
 };
+
+bootstrapMetricSeries();
 
 export async function handleMockRequest(request: MockRequest): Promise<MockResponse> {
   await sleep(MOCK_DELAY_MS);
@@ -449,6 +463,52 @@ export async function handleMockRequest(request: MockRequest): Promise<MockRespo
     return ok(data);
   }
 
+  const metricSeriesMatch = path.match(/^\/api\/apps\/(\d+)\/runs\/(\d+)\/metrics\/series$/);
+  if (metricSeriesMatch && method === "GET") {
+    const auth = requireAuth(request);
+    if (!auth.ok) return auth.response;
+
+    const appPk = Number(metricSeriesMatch[1]);
+    const runId = Number(metricSeriesMatch[2]);
+
+    const app = findOwnedApp(appPk, auth.user.id);
+    if (!app) return fail(404, "Not found");
+
+    const run = state.runs.find((item) => item.id === runId && item.app_pk === app.id);
+    if (!run) return fail(404, "Not found");
+
+    const requestedMetric = asString(url.searchParams.get("metric") ?? "").trim();
+    const limit = clampNumber(Number(url.searchParams.get("limit") ?? "240"), 10, 2000);
+
+    const names = Array.from(
+      new Set(state.metricSeries.filter((item) => item.run_id === run.id).map((item) => item.metric_name)),
+    ).sort((a, b) => a.localeCompare(b));
+
+    const selectedMetric = names.includes(requestedMetric) ? requestedMetric : names[0] || null;
+    const points = selectedMetric
+      ? state.metricSeries
+          .filter((item) => item.run_id === run.id && item.metric_name === selectedMetric)
+          .sort((a, b) => a.event_time.localeCompare(b.event_time))
+          .slice(-limit)
+          .map((item) => ({
+            id: item.id,
+            metric_name: item.metric_name,
+            value: item.metric_value,
+            step: item.step,
+            epoch: item.epoch,
+            event_time: item.event_time,
+          }))
+      : [];
+
+    return ok({
+      run_id: run.id,
+      train_id: run.train_id,
+      metric_names: names,
+      selected_metric: selectedMetric,
+      points,
+    });
+  }
+
   if (method === "POST" && path === "/api/agent/config/fetch") {
     const appAuth = requireAppAuth(request, url.searchParams);
     if (!appAuth.ok) return appAuth.response;
@@ -512,6 +572,7 @@ export async function handleMockRequest(request: MockRequest): Promise<MockRespo
       received_at: now,
     };
     state.metrics.push(record);
+    appendMetricSeriesPoints(run.id, payload, now);
 
     return response(202, { code: 0, message: "ok", run_id: run.id, record_id: record.id });
   }
@@ -661,6 +722,68 @@ function asString(value: unknown): string {
 function clampNumber(input: number, min: number, max: number): number {
   if (Number.isNaN(input)) return min;
   return Math.min(Math.max(input, min), max);
+}
+
+function bootstrapMetricSeries(): void {
+  for (const record of state.metrics) {
+    appendMetricSeriesPoints(record.run_id, record.payload, record.received_at);
+  }
+}
+
+function appendMetricSeriesPoints(runId: number, payload: JsonObject, eventTime: string): void {
+  const step = parseOptionalInt(payload.step ?? payload.global_step);
+  const epoch = parseOptionalInt(payload.epoch);
+
+  for (const [key, rawValue] of Object.entries(payload)) {
+    if (isReservedMetricKey(key)) {
+      continue;
+    }
+
+    const metricValue = parseMetricNumber(rawValue);
+    if (metricValue === null) {
+      continue;
+    }
+
+    state.metricSeries.push({
+      id: state.nextIds.metricSeries++,
+      run_id: runId,
+      metric_name: key,
+      metric_value: metricValue,
+      step,
+      epoch,
+      event_time: eventTime,
+    });
+  }
+}
+
+function parseOptionalInt(value: unknown): number | null {
+  if (value === undefined || value === null || typeof value === "boolean") {
+    return null;
+  }
+
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  return Math.trunc(parsed);
+}
+
+function parseMetricNumber(value: unknown): number | null {
+  if (value === undefined || value === null || typeof value === "boolean") {
+    return null;
+  }
+
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function isReservedMetricKey(key: string): boolean {
+  return ["train_id", "step", "global_step", "epoch", "timestamp", "time", "app_id", "app_secret"].includes(key);
 }
 
 function randomHex(len: number): string {

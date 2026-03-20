@@ -12,6 +12,7 @@
 - 配置分发（`/api/agent/config/fetch`）
 - 训练指标上报（`/api/metrics/ingest`）
 - 指标查询（按 app/run）
+- 指标时序点存储与按指标曲线查询
 
 ## 启动
 
@@ -55,6 +56,10 @@ uv sync
 - `POST /api/apps/:appId/configs/:configId/publish`
 - `POST /api/agent/config/fetch`（Agent 用）
 - `POST /api/metrics/ingest`（Agent 用）
+- `GET /api/apps/:appId/runs/:runId/metrics/series`
+
+`init-db` 会在建表后尝试启用 TimescaleDB（hypertable）。
+若数据库未安装 TimescaleDB 扩展，会自动回退到普通 PostgreSQL 表存储时序点。
 
 ## Agent 对接
 

@@ -5,9 +5,10 @@ from werkzeug.security import generate_password_hash
 from flask import Blueprint, g, jsonify, request
 
 from ..extensions import db
-from ..models import Application, ConfigVersion, MetricRecord, TrainingRun
+from ..models import Application, ConfigVersion, MetricRecord, MetricSeriesPoint, TrainingRun
 from ..redis_client import redis_set_json
 from ..security import auth_required
+from ..timeseries import backfill_metric_series_for_run
 
 apps_bp = Blueprint("apps", __name__, url_prefix="/api/apps")
 
@@ -20,6 +21,14 @@ def _app_to_dict(app: Application):
         "is_active": app.is_active,
         "created_at": app.created_at.isoformat(),
     }
+
+
+def _parse_limit(raw: str | None, default: int, min_value: int, max_value: int) -> int:
+    try:
+        value = int(raw or str(default))
+    except (TypeError, ValueError):
+        value = default
+    return min(max(value, min_value), max_value)
 
 
 @apps_bp.get("")
@@ -132,7 +141,7 @@ def list_runs(app_pk: int):
 def list_run_metrics(app_pk: int, run_id: int):
     app = Application.query.filter_by(id=app_pk, created_by=g.user.id).first_or_404()
     run = TrainingRun.query.filter_by(id=run_id, app_id=app.id).first_or_404()
-    limit = min(max(int(request.args.get("limit", 50)), 1), 500)
+    limit = _parse_limit(request.args.get("limit"), default=50, min_value=1, max_value=500)
     rows = (
         MetricRecord.query.filter_by(run_id=run.id)
         .order_by(MetricRecord.id.desc())
@@ -148,4 +157,62 @@ def list_run_metrics(app_pk: int, run_id: int):
             }
             for r in rows
         ]
+    )
+
+
+@apps_bp.get("/<int:app_pk>/runs/<int:run_id>/metrics/series")
+@auth_required
+def list_run_metric_series(app_pk: int, run_id: int):
+    app = Application.query.filter_by(id=app_pk, created_by=g.user.id).first_or_404()
+    run = TrainingRun.query.filter_by(id=run_id, app_id=app.id).first_or_404()
+
+    # Read paths can be called against historical records created before the new series table was introduced.
+    backfill_metric_series_for_run(run.id)
+
+    limit = _parse_limit(request.args.get("limit"), default=240, min_value=10, max_value=2000)
+    metric = (request.args.get("metric") or "").strip()
+
+    metric_names = [
+        name
+        for (name,) in (
+            db.session.query(MetricSeriesPoint.metric_name)
+            .filter_by(run_id=run.id)
+            .distinct()
+            .order_by(MetricSeriesPoint.metric_name.asc())
+            .all()
+        )
+    ]
+
+    selected_metric = metric if metric in metric_names else (metric_names[0] if metric_names else None)
+    points = []
+
+    if selected_metric:
+        rows = (
+            MetricSeriesPoint.query.filter_by(run_id=run.id, metric_name=selected_metric)
+            .order_by(MetricSeriesPoint.event_time.desc(), MetricSeriesPoint.id.desc())
+            .limit(limit)
+            .all()
+        )
+
+        rows = list(reversed(rows))
+        points = [
+            {
+                "id": row.id,
+                "metric_name": row.metric_name,
+                "value": row.metric_value,
+                "step": row.step,
+                "epoch": row.epoch,
+                "event_time": row.event_time.isoformat(),
+            }
+            for row in rows
+        ]
+
+    return jsonify(
+        {
+            "run_id": run.id,
+            "train_id": run.train_id,
+            "metric_names": metric_names,
+            "selected_metric": selected_metric,
+            "points": points,
+        }
     )

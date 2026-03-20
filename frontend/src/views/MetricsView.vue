@@ -5,7 +5,7 @@
         <div>
           <p class="panel-kicker">Metrics</p>
           <h3>训练数据</h3>
-          <p class="panel-desc">按应用查看训练运行记录，点击某个 Run 可查看最近指标明细。</p>
+          <p class="panel-desc">按应用选择训练 Run，并在下方按指标查看时序图表。</p>
         </div>
       </div>
 
@@ -19,8 +19,8 @@
           <strong>{{ runs.length }}</strong>
         </div>
         <div class="stat-pill">
-          <span>指标条数</span>
-          <strong>{{ records.length }}</strong>
+          <span>当前指标点</span>
+          <strong>{{ metricPoints.length }}</strong>
         </div>
       </div>
 
@@ -40,16 +40,91 @@
     </section>
 
     <section class="card" v-if="selectedRunId">
-      <h3>最近指标（Run: {{ selectedRunId }}）</h3>
-      <el-table class="data-table" :data="records" border empty-text="暂无指标记录">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="received_at" label="接收时间" width="220">
-          <template #default="scope">{{ formatDate(scope.row.received_at) }}</template>
+      <div class="panel-head">
+        <div>
+          <p class="panel-kicker">Run Dashboard</p>
+          <h3>指标图表（{{ selectedRunTrainId || `Run ${selectedRunId}` }}）</h3>
+          <p class="panel-desc">按指标拆分查看趋势，支持快速切换 loss / acc / lr 等数值指标。</p>
+        </div>
+        <div class="chart-toolbar">
+          <el-select
+            v-model="selectedMetric"
+            class="metric-select"
+            placeholder="选择指标"
+            :disabled="!metricNames.length"
+            @change="onMetricChange"
+          >
+            <el-option v-for="name in metricNames" :key="name" :label="name" :value="name" />
+          </el-select>
+          <el-button class="ghost-btn" :disabled="!selectedRunId" @click="reloadSeries">刷新</el-button>
+        </div>
+      </div>
+
+      <div class="metric-board" v-loading="loadingSeries">
+        <div class="metric-quick-stats">
+          <div class="metric-quick-stat">
+            <span>当前指标</span>
+            <strong>{{ selectedMetric || "-" }}</strong>
+          </div>
+          <div class="metric-quick-stat">
+            <span>最新值</span>
+            <strong>{{ latestValueLabel }}</strong>
+          </div>
+          <div class="metric-quick-stat">
+            <span>最小值</span>
+            <strong>{{ minValueLabel }}</strong>
+          </div>
+          <div class="metric-quick-stat">
+            <span>最大值</span>
+            <strong>{{ maxValueLabel }}</strong>
+          </div>
+        </div>
+
+        <div class="metric-chart-card" v-if="metricPoints.length">
+          <svg class="metric-chart" :viewBox="`0 0 ${chartWidth} ${chartHeight}`" preserveAspectRatio="none">
+            <line
+              v-for="tick in chartYTicks"
+              :key="`tick-${tick.y}`"
+              class="metric-grid-line"
+              :x1="chartPaddingX"
+              :x2="chartWidth - chartPaddingX"
+              :y1="tick.y"
+              :y2="tick.y"
+            />
+
+            <polyline class="metric-line" :points="chartPolyline" />
+
+            <circle
+              v-for="point in chartPoints"
+              :key="point.id"
+              class="metric-point"
+              :cx="point.x"
+              :cy="point.y"
+              r="2.8"
+            />
+          </svg>
+
+          <div class="metric-axis-labels">
+            <span>{{ firstXAxisLabel }}</span>
+            <span>{{ lastXAxisLabel }}</span>
+          </div>
+        </div>
+
+        <el-empty v-else description="该 Run 暂无可绘制的数值指标" />
+      </div>
+
+      <el-table class="data-table table-wrap" :data="reversedMetricPoints" border empty-text="暂无指标点数据">
+        <el-table-column prop="event_time" label="时间" min-width="170">
+          <template #default="scope">{{ formatDate(scope.row.event_time) }}</template>
         </el-table-column>
-        <el-table-column label="Payload">
-          <template #default="scope">
-            <pre class="payload-block">{{ JSON.stringify(scope.row.payload, null, 2) }}</pre>
-          </template>
+        <el-table-column prop="step" label="Step" width="100">
+          <template #default="scope">{{ scope.row.step ?? "-" }}</template>
+        </el-table-column>
+        <el-table-column prop="epoch" label="Epoch" width="100">
+          <template #default="scope">{{ scope.row.epoch ?? "-" }}</template>
+        </el-table-column>
+        <el-table-column prop="value" :label="selectedMetric ? `${selectedMetric} 值` : '值'" min-width="180">
+          <template #default="scope">{{ formatMetricValue(scope.row.value) }}</template>
         </el-table-column>
       </el-table>
     </section>
@@ -57,47 +132,246 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import http from "../api/http";
 
-const apps = ref<any[]>([]);
-const runs = ref<any[]>([]);
-const records = ref<any[]>([]);
+interface AppItem {
+  id: number;
+  name: string;
+  app_id: string;
+}
+
+interface RunItem {
+  id: number;
+  train_id: string;
+  first_seen_at: string;
+  last_seen_at: string;
+}
+
+interface MetricPoint {
+  id: number;
+  metric_name: string;
+  value: number;
+  step: number | null;
+  epoch: number | null;
+  event_time: string;
+}
+
+interface MetricSeriesResponse {
+  run_id: number;
+  train_id: string;
+  metric_names: string[];
+  selected_metric: string | null;
+  points: MetricPoint[];
+}
+
+interface ChartPoint {
+  id: number;
+  x: number;
+  y: number;
+}
+
+const chartWidth = 900;
+const chartHeight = 280;
+const chartPaddingX = 24;
+const chartPaddingY = 20;
+
+const apps = ref<AppItem[]>([]);
+const runs = ref<RunItem[]>([]);
+const metricNames = ref<string[]>([]);
+const metricPoints = ref<MetricPoint[]>([]);
 const selectedAppId = ref<number | null>(null);
 const selectedRunId = ref<number | null>(null);
+const selectedRunTrainId = ref("");
+const selectedMetric = ref("");
+const loadingSeries = ref(false);
+
+const reversedMetricPoints = computed(() => [...metricPoints.value].reverse());
+
+const latestValueLabel = computed(() => formatMetricValue(metricPoints.value[metricPoints.value.length - 1]?.value));
+
+const minValueLabel = computed(() => {
+  if (!metricPoints.value.length) return "-";
+  return formatMetricValue(Math.min(...metricPoints.value.map((item) => item.value)));
+});
+
+const maxValueLabel = computed(() => {
+  if (!metricPoints.value.length) return "-";
+  return formatMetricValue(Math.max(...metricPoints.value.map((item) => item.value)));
+});
+
+const chartPoints = computed<ChartPoint[]>(() => {
+  const data = metricPoints.value;
+  if (!data.length) return [];
+
+  const innerWidth = chartWidth - chartPaddingX * 2;
+  const innerHeight = chartHeight - chartPaddingY * 2;
+  const min = Math.min(...data.map((item) => item.value));
+  const max = Math.max(...data.map((item) => item.value));
+  const span = max - min || 1;
+  const denominator = Math.max(data.length - 1, 1);
+
+  return data.map((item, index) => {
+    const ratioX = data.length === 1 ? 0.5 : index / denominator;
+    const ratioY = (item.value - min) / span;
+    return {
+      id: item.id,
+      x: chartPaddingX + ratioX * innerWidth,
+      y: chartPaddingY + (1 - ratioY) * innerHeight,
+    };
+  });
+});
+
+const chartPolyline = computed(() => chartPoints.value.map((point) => `${point.x},${point.y}`).join(" "));
+
+const chartYTicks = computed(() => {
+  const data = metricPoints.value;
+  if (!data.length) return [] as Array<{ y: number; value: number }>;
+
+  const max = Math.max(...data.map((item) => item.value));
+  const min = Math.min(...data.map((item) => item.value));
+  const span = max - min || 1;
+  const innerHeight = chartHeight - chartPaddingY * 2;
+  const steps = 4;
+
+  return Array.from({ length: steps + 1 }, (_, index) => {
+    const ratio = index / steps;
+    return {
+      y: chartPaddingY + ratio * innerHeight,
+      value: max - span * ratio,
+    };
+  });
+});
+
+const firstXAxisLabel = computed(() => formatXAxisLabel(metricPoints.value[0]));
+const lastXAxisLabel = computed(() => formatXAxisLabel(metricPoints.value[metricPoints.value.length - 1]));
 
 const formatDate = (value: string) => {
   if (!value) return "-";
   return value.replace("T", " ").replace("Z", "");
 };
 
+const formatXAxisLabel = (point: MetricPoint | undefined) => {
+  if (!point) return "-";
+  if (point.step !== null && point.step !== undefined) return `step ${point.step}`;
+  if (point.epoch !== null && point.epoch !== undefined) return `epoch ${point.epoch}`;
+  return formatDate(point.event_time);
+};
+
+const formatMetricValue = (value: number | null | undefined) => {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "-";
+  }
+
+  const abs = Math.abs(value);
+  if (abs >= 1000) {
+    return value.toFixed(2);
+  }
+
+  if (abs >= 1) {
+    return value.toFixed(4);
+  }
+
+  return value.toFixed(6);
+};
+
 const loadApps = async () => {
-  const { data } = await http.get("/api/apps");
-  apps.value = data;
-  if (data.length && !selectedAppId.value) {
-    selectedAppId.value = data[0].id;
+  try {
+    const { data } = await http.get<AppItem[]>("/api/apps");
+    apps.value = data;
+
+    if (!data.length) {
+      selectedAppId.value = null;
+      runs.value = [];
+      resetRunSelection();
+      return;
+    }
+
+    if (!selectedAppId.value || !data.some((item) => item.id === selectedAppId.value)) {
+      selectedAppId.value = data[0].id;
+    }
+
     await loadRuns();
+  } catch {
+    ElMessage.error("加载应用失败");
   }
 };
 
 const loadRuns = async () => {
-  if (!selectedAppId.value) return;
-  const { data } = await http.get(`/api/apps/${selectedAppId.value}/runs`);
-  runs.value = data;
-  records.value = [];
-  selectedRunId.value = null;
+  if (!selectedAppId.value) {
+    runs.value = [];
+    resetRunSelection();
+    return;
+  }
+
+  try {
+    const { data } = await http.get<RunItem[]>(`/api/apps/${selectedAppId.value}/runs`);
+    runs.value = data;
+    resetRunSelection();
+  } catch {
+    ElMessage.error("加载训练运行失败");
+  }
 };
 
-const selectRun = async (row: any) => {
+const resetRunSelection = () => {
+  selectedRunId.value = null;
+  selectedRunTrainId.value = "";
+  selectedMetric.value = "";
+  metricNames.value = [];
+  metricPoints.value = [];
+};
+
+const loadSeries = async (runId: number, metric?: string) => {
   if (!selectedAppId.value) return;
+
+  loadingSeries.value = true;
   try {
-    selectedRunId.value = row.id;
-    const { data } = await http.get(`/api/apps/${selectedAppId.value}/runs/${row.id}/metrics?limit=30`);
-    records.value = data;
+    const query = new URLSearchParams({ limit: "300" });
+    if (metric) {
+      query.set("metric", metric);
+    }
+
+    const { data } = await http.get<MetricSeriesResponse>(
+      `/api/apps/${selectedAppId.value}/runs/${runId}/metrics/series?${query.toString()}`,
+    );
+
+    metricNames.value = Array.isArray(data.metric_names) ? data.metric_names : [];
+    selectedMetric.value = data.selected_metric || "";
+    metricPoints.value = (Array.isArray(data.points) ? data.points : [])
+      .map((item) => ({
+        id: Number(item.id),
+        metric_name: String(item.metric_name || ""),
+        value: Number(item.value),
+        step: item.step ?? null,
+        epoch: item.epoch ?? null,
+        event_time: String(item.event_time || ""),
+      }))
+      .filter((item) => Number.isFinite(item.value));
   } catch {
     ElMessage.error("加载指标失败");
+  } finally {
+    loadingSeries.value = false;
   }
+};
+
+const selectRun = async (row: RunItem) => {
+  selectedRunId.value = row.id;
+  selectedRunTrainId.value = row.train_id;
+  selectedMetric.value = "";
+  metricNames.value = [];
+  metricPoints.value = [];
+  await loadSeries(row.id);
+};
+
+const onMetricChange = async (metric: string) => {
+  if (!selectedRunId.value || !metric) return;
+  await loadSeries(selectedRunId.value, metric);
+};
+
+const reloadSeries = async () => {
+  if (!selectedRunId.value) return;
+  await loadSeries(selectedRunId.value, selectedMetric.value || undefined);
 };
 
 onMounted(loadApps);

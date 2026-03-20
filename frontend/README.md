@@ -77,6 +77,7 @@ VITE_API_BASE_URL=http://localhost:8000
 - `POST /api/apps/:appId/configs/:configId/publish`
 - `GET /api/apps/:appId/runs`
 - `GET /api/apps/:appId/runs/:runId/metrics`
+- `GET /api/apps/:appId/runs/:runId/metrics/series`
 - `POST /api/agent/config/fetch`
 - `POST /api/metrics/ingest`
 

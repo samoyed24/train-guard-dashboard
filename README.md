@@ -87,6 +87,7 @@ VITE_API_BASE_URL=http://localhost:8000
 - `POST /api/apps/:appId/configs/:configId/publish`
 - `GET /api/apps/:appId/runs`
 - `GET /api/apps/:appId/runs/:runId/metrics`
+- `GET /api/apps/:appId/runs/:runId/metrics/series`
 
 Agent 侧（app_id/app_secret 鉴权）：
 
