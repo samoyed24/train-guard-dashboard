@@ -28,8 +28,22 @@
         <el-option v-for="item in apps" :key="item.id" :label="item.name + ' (' + item.app_id + ')'" :value="item.id" />
       </el-select>
 
-      <el-table class="data-table table-wrap" :data="runs" border empty-text="暂无训练运行记录" @row-click="selectRun">
-        <el-table-column prop="train_id" label="Train ID" />
+      <el-table
+        class="data-table table-wrap run-table"
+        :data="runs"
+        border
+        highlight-current-row
+        empty-text="暂无训练运行记录"
+        :row-class-name="getRunRowClass"
+        @row-click="onRunRowClick"
+      >
+        <el-table-column prop="train_id" label="Train ID">
+          <template #default="scope">
+            <span class="run-id-pill" :class="{ 'is-active': scope.row.id === selectedRunId }">
+              {{ scope.row.train_id }}
+            </span>
+          </template>
+        </el-table-column>
         <el-table-column prop="first_seen_at" label="首次上报" min-width="170">
           <template #default="scope">{{ formatDate(scope.row.first_seen_at) }}</template>
         </el-table-column>
@@ -37,6 +51,10 @@
           <template #default="scope">{{ formatDate(scope.row.last_seen_at) }}</template>
         </el-table-column>
       </el-table>
+
+      <p class="table-empty-note run-hint" v-if="runs.length && !selectedRunId">
+        点击任意 Run 行，加载该 Run 的指标曲线。
+      </p>
     </section>
 
     <section class="card" v-if="selectedRunId">
@@ -306,9 +324,17 @@ const loadRuns = async () => {
   }
 
   try {
+    const previousRunId = selectedRunId.value;
     const { data } = await http.get<RunItem[]>(`/api/apps/${selectedAppId.value}/runs`);
     runs.value = data;
-    resetRunSelection();
+
+    if (!data.length) {
+      resetRunSelection();
+      return;
+    }
+
+    const nextRun = data.find((item) => item.id === previousRunId) ?? data[0];
+    await selectRun(nextRun);
   } catch {
     ElMessage.error("加载训练运行失败");
   }
@@ -372,6 +398,14 @@ const onMetricChange = async (metric: string) => {
 const reloadSeries = async () => {
   if (!selectedRunId.value) return;
   await loadSeries(selectedRunId.value, selectedMetric.value || undefined);
+};
+
+const onRunRowClick = async (row: RunItem) => {
+  await selectRun(row);
+};
+
+const getRunRowClass = ({ row }: { row: RunItem }) => {
+  return row.id === selectedRunId.value ? "run-row is-selected" : "run-row";
 };
 
 onMounted(loadApps);

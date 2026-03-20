@@ -261,6 +261,45 @@ a {
   font-size: 0.79rem;
 }
 
+.run-hint {
+  margin: 10px 2px 0;
+}
+
+.run-id-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 154, 195, 0.48);
+  background: rgba(233, 243, 255, 0.78);
+  color: #1f3d61;
+  font-family: var(--font-heading);
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.run-id-pill.is-active {
+  border-color: rgba(47, 114, 255, 0.75);
+  background: rgba(47, 114, 255, 0.14);
+  color: #134188;
+}
+
+.run-table .el-table__body .el-table__row {
+  cursor: pointer;
+}
+
+.run-table .el-table__body .el-table__row:hover .run-id-pill {
+  border-color: rgba(47, 114, 255, 0.62);
+  background: rgba(47, 114, 255, 0.1);
+}
+
+.run-table .el-table__body .el-table__row.current-row .run-id-pill,
+.run-table .el-table__body .el-table__row.is-selected .run-id-pill {
+  border-color: rgba(47, 114, 255, 0.82);
+  background: rgba(47, 114, 255, 0.16);
+}
+
 .info-chip {
   display: inline-flex;
   align-items: center;
