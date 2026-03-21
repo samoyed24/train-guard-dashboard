@@ -42,6 +42,12 @@ jobs:
           DEV_POSTGRES_PASSWORD: ${{ secrets.DEV_POSTGRES_PASSWORD }}
           DEV_POSTGRES_IMAGE: ${{ secrets.DEV_POSTGRES_IMAGE }}
           DEV_REDIS_IMAGE: ${{ secrets.DEV_REDIS_IMAGE }}
+          DEV_SMTP_HOST: ${{ secrets.DEV_SMTP_HOST }}
+          DEV_SMTP_PORT: ${{ secrets.DEV_SMTP_PORT }}
+          DEV_SMTP_USERNAME: ${{ secrets.DEV_SMTP_USERNAME }}
+          DEV_SMTP_PASSWORD: ${{ secrets.DEV_SMTP_PASSWORD }}
+          DEV_SMTP_USE_TLS: ${{ secrets.DEV_SMTP_USE_TLS }}
+          DEV_SMTP_FROM_EMAIL: ${{ secrets.DEV_SMTP_FROM_EMAIL }}
         run: |
           [[ -n "${DEV_ACR_REGISTRY}" ]] || { echo "Missing required secret: DEV_ACR_REGISTRY"; exit 1; }
           [[ -n "${DEV_ACR_NAMESPACE}" ]] || { echo "Missing required secret: DEV_ACR_NAMESPACE"; exit 1; }
@@ -59,6 +65,12 @@ jobs:
           [[ -n "${DEV_POSTGRES_PASSWORD}" ]] || { echo "Missing required secret: DEV_POSTGRES_PASSWORD"; exit 1; }
           [[ -n "${DEV_POSTGRES_IMAGE}" ]] || { echo "Missing required secret: DEV_POSTGRES_IMAGE"; exit 1; }
           [[ -n "${DEV_REDIS_IMAGE}" ]] || { echo "Missing required secret: DEV_REDIS_IMAGE"; exit 1; }
+          [[ -n "${DEV_SMTP_HOST}" ]] || { echo "Missing required secret: DEV_SMTP_HOST"; exit 1; }
+          [[ -n "${DEV_SMTP_PORT}" ]] || { echo "Missing required secret: DEV_SMTP_PORT"; exit 1; }
+          [[ -n "${DEV_SMTP_USERNAME}" ]] || { echo "Missing required secret: DEV_SMTP_USERNAME"; exit 1; }
+          [[ -n "${DEV_SMTP_PASSWORD}" ]] || { echo "Missing required secret: DEV_SMTP_PASSWORD"; exit 1; }
+          [[ -n "${DEV_SMTP_USE_TLS}" ]] || { echo "Missing required secret: DEV_SMTP_USE_TLS"; exit 1; }
+          [[ -n "${DEV_SMTP_FROM_EMAIL}" ]] || { echo "Missing required secret: DEV_SMTP_FROM_EMAIL"; exit 1; }
 
       - name: Set image names
         env:
@@ -137,6 +149,14 @@ jobs:
           JWT_EXPIRES_MINUTES=${{ secrets.DEV_JWT_EXPIRES_MINUTES }}
           FLASK_DEBUG=0
           CORS_ORIGINS=${{ secrets.DEV_CORS_ORIGINS }}
+          EMAIL_CODE_TTL_SECONDS=${{ secrets.DEV_EMAIL_CODE_TTL_SECONDS || '300' }}
+          EMAIL_CODE_COOLDOWN_SECONDS=${{ secrets.DEV_EMAIL_CODE_COOLDOWN_SECONDS || '60' }}
+          SMTP_HOST=${{ secrets.DEV_SMTP_HOST }}
+          SMTP_PORT=${{ secrets.DEV_SMTP_PORT }}
+          SMTP_USERNAME=${{ secrets.DEV_SMTP_USERNAME }}
+          SMTP_PASSWORD=${{ secrets.DEV_SMTP_PASSWORD }}
+          SMTP_USE_TLS=${{ secrets.DEV_SMTP_USE_TLS }}
+          SMTP_FROM_EMAIL=${{ secrets.DEV_SMTP_FROM_EMAIL }}
 
           POSTGRES_DB=${{ secrets.DEV_POSTGRES_DB }}
           POSTGRES_USER=${{ secrets.DEV_POSTGRES_USER }}
