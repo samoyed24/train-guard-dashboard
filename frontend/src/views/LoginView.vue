@@ -52,7 +52,7 @@ const onLogin = async () => {
   try {
     await auth.login(form.email, form.password);
     ElMessage.success(t("auth.loginSuccess"));
-    router.push("/apps");
+    router.push("/dashboard");
   } catch (e: any) {
     ElMessage.error(e?.response?.data?.message || t("auth.loginFailed"));
   }
