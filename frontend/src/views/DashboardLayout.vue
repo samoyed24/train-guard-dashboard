@@ -15,9 +15,9 @@
         <el-menu-item index="/metrics">{{ t("routes.metrics") }}</el-menu-item>
       </el-menu>
 
-      <div class="sidebar-foot" v-if="showApiModeBadge">
+      <div class="sidebar-foot" v-if="showApiModeBadge && isMockMode">
         <span class="dot"></span>
-        <span>{{ t("layout.apiMode") }} {{ apiMode }}</span>
+        <span>mock mode</span>
       </div>
     </aside>
 
@@ -120,6 +120,7 @@ const route = useRoute();
 const auth = useAuthStore();
 const { t, locale } = useI18n();
 const apiMode = String(import.meta.env.VITE_API_MODE ?? "mock").toUpperCase();
+const isMockMode = apiMode === "MOCK";
 const selectedLocale = ref(locale.value as AppLocale);
 const settingsVisible = ref(false);
 const unreadNoticeCount = ref(3);
