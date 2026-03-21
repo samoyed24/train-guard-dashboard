@@ -11,6 +11,11 @@ from ..security import auth_required, blacklist_token, generate_token, hash_pass
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 
+def internal_error_message(default_message: str, exc: Exception) -> str:
+    current_app.logger.exception(default_message)
+    return default_message
+
+
 def register_email_code_key(email: str) -> str:
     return f"auth:register:email_code:{email}"
 
@@ -41,17 +46,19 @@ def send_register_email_code():
     code = generate_email_code()
     ttl_seconds = current_app.config["EMAIL_CODE_TTL_SECONDS"]
     cooldown_seconds = current_app.config["EMAIL_CODE_COOLDOWN_SECONDS"]
-    redis_setex(register_email_code_key(email), ttl_seconds, code)
-    redis_setex(cooldown_key, cooldown_seconds, "1")
 
     subject = "Train Guard 注册验证码"
     body = f"你的注册验证码是：{code}。\n\n验证码 {ttl_seconds} 秒内有效。"
     try:
         send_email(email, subject, body)
-    except Exception:
-        # Sending failed; revoke generated code to avoid stale records in Redis.
-        redis_delete(register_email_code_key(email))
-        return jsonify({"message": "Failed to send verification email"}), 500
+    except Exception as exc:
+        return (
+            jsonify({"message": internal_error_message("Failed to send verification email", exc)}),
+            500,
+        )
+
+    redis_setex(register_email_code_key(email), ttl_seconds, code)
+    redis_setex(cooldown_key, cooldown_seconds, "1")
 
     return jsonify({"message": "ok"})
 
