@@ -802,10 +802,44 @@ a {
   color: #0b6c85;
 }
 
-.topbar-user {
+.topbar-actions {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+}
+
+.topbar-badge .el-badge__content.is-fixed {
+  transform: translateY(-2px) translateX(86%);
+}
+
+.icon-btn.el-button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 1rem;
+}
+
+.icon-btn .el-icon {
+  font-size: 1rem;
+}
+
+.user-trigger {
+  border: 1px solid rgba(152, 176, 209, 0.66);
+  background: rgba(235, 246, 255, 0.66);
+  border-radius: 999px;
+  height: 36px;
+  padding: 2px 8px 2px 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.user-trigger:hover {
+  border-color: var(--brand-soft);
+  background: rgba(229, 242, 255, 0.84);
 }
 
 .user-badge {
@@ -825,6 +859,37 @@ a {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.user-arrow {
+  color: #607793;
+}
+
+.settings-intro {
+  margin: 0 0 14px;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.settings-list {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-item {
+  border: 1px solid rgba(155, 182, 218, 0.52);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(233, 243, 255, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-item > span {
+  color: #244362;
   font-weight: 600;
 }
 
@@ -1131,9 +1196,13 @@ a {
     padding-top: 0;
   }
 
-  .topbar-user {
+  .topbar-actions {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .user-name {
+    max-width: 116px;
   }
 
   .stat-strip {
