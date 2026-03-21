@@ -49,11 +49,10 @@ body {
   font-family: var(--font-body);
   color: var(--ink);
   background: var(--page-bg);
-  overflow: hidden;
-}
   background-color: #11233d;
   background-repeat: no-repeat;
   background-attachment: scroll;
+  overflow: hidden;
   overscroll-behavior-y: none;
 }
 
