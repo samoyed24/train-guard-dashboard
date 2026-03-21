@@ -117,7 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ArrowDown, Bell, Message, Setting, Moon, Sunny } from "@element-plus/icons-vue";
@@ -137,6 +137,7 @@ const unreadNoticeCount = ref(3);
 const showApiModeBadge = ref(readBool("ui_show_api_mode_badge", true));
 const showNotificationBadge = ref(readBool("ui_show_notification_badge", true));
 const isDarkMode = ref(readThemeMode() === "dark");
+let themeSwitchTimer: number | undefined;
 
 const breadcrumbItems = computed(() => {
   return route.matched
@@ -167,6 +168,22 @@ function applyTheme(isDark: boolean) {
   localStorage.setItem("ui_theme_mode", isDark ? "dark" : "light");
 }
 
+function refreshTablePaintForChrome() {
+  requestAnimationFrame(() => {
+    const tables = Array.from(document.querySelectorAll(".data-table.el-table")) as HTMLElement[];
+    tables.forEach((table) => {
+      table.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+      // Force a reflow so row background is recalculated after theme variable changes.
+      void table.offsetHeight;
+      table.classList.add("theme-repaint");
+    });
+
+    requestAnimationFrame(() => {
+      tables.forEach((table) => table.classList.remove("theme-repaint"));
+    });
+  });
+}
+
 const onLocaleChange = (value: AppLocale) => {
   setLocale(value);
   selectedLocale.value = value;
@@ -182,8 +199,18 @@ watch(showNotificationBadge, (value) => {
 
 watch(
   isDarkMode,
-  (value) => {
+  async (value) => {
+    document.documentElement.classList.add("theme-switching");
     applyTheme(value);
+    await nextTick();
+    refreshTablePaintForChrome();
+    window.dispatchEvent(new Event("resize"));
+    if (themeSwitchTimer !== undefined) {
+      window.clearTimeout(themeSwitchTimer);
+    }
+    themeSwitchTimer = window.setTimeout(() => {
+      document.documentElement.classList.remove("theme-switching");
+    }, 180);
   },
   { immediate: true },
 );
