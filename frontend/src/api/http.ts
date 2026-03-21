@@ -5,6 +5,8 @@ import { handleMockRequest } from "./mockServer";
 const API_MODE = String(import.meta.env.VITE_API_MODE ?? "mock").toLowerCase();
 const USE_MOCK = API_MODE !== "real";
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000");
+const APP_BASE_URL = String(import.meta.env.BASE_URL ?? "/");
+const LOGIN_PATH = new URL("login", `https://app.local${APP_BASE_URL}`).pathname;
 
 const mockAdapter: AxiosAdapter = async (config) => {
   const requestUrl = new URL(config.url ?? "/", config.baseURL ?? "http://mock.local").toString();
@@ -59,7 +61,7 @@ http.interceptors.response.use(
     if (err?.response?.status === 401) {
       localStorage.removeItem("token");
       if (!location.pathname.includes("/login")) {
-        location.href = "/login";
+        location.href = LOGIN_PATH;
       }
     }
     return Promise.reject(err);
