@@ -760,6 +760,94 @@ a {
   color: #d7e8ff;
 }
 
+:root[data-theme="dark"] .el-loading-mask {
+  background-color: rgba(10, 22, 36, 0.72);
+  backdrop-filter: blur(1.5px);
+}
+
+:root[data-theme="dark"] .el-loading-spinner .path {
+  stroke: #7fc5ff;
+}
+
+:root[data-theme="dark"] .el-loading-spinner .el-loading-text {
+  color: #cfe6ff;
+}
+
+:root[data-theme="dark"] .el-tag {
+  --el-tag-border-color: rgba(87, 123, 166, 0.72);
+  --el-tag-hover-color: rgba(115, 168, 255, 0.25);
+  border-color: rgba(87, 123, 166, 0.72);
+  background-color: rgba(20, 39, 62, 0.82);
+  color: #d3e7ff;
+}
+
+:root[data-theme="dark"] .el-tag.el-tag--success {
+  --el-tag-border-color: rgba(66, 201, 169, 0.56);
+  background-color: rgba(21, 67, 66, 0.62);
+  color: #9dece3;
+}
+
+:root[data-theme="dark"] .el-tag.el-tag--info {
+  --el-tag-border-color: rgba(110, 152, 201, 0.62);
+  background-color: rgba(26, 50, 77, 0.72);
+  color: #c7e2ff;
+}
+
+:root[data-theme="dark"] .el-input__wrapper,
+:root[data-theme="dark"] .el-textarea__inner,
+:root[data-theme="dark"] .el-select__wrapper {
+  background-color: rgba(18, 36, 57, 0.86);
+  box-shadow: 0 0 0 1px rgba(78, 114, 156, 0.62) inset;
+}
+
+:root[data-theme="dark"] .el-input__inner,
+:root[data-theme="dark"] .el-textarea__inner {
+  color: #dfeeff;
+}
+
+:root[data-theme="dark"] .el-input__inner::placeholder,
+:root[data-theme="dark"] .el-textarea__inner::placeholder {
+  color: #88a7cc;
+}
+
+:root[data-theme="dark"] .el-input-number {
+  --el-input-number-border-color: rgba(78, 114, 156, 0.62);
+}
+
+:root[data-theme="dark"] .el-input-number .el-input__wrapper {
+  background-color: rgba(18, 36, 57, 0.86);
+}
+
+:root[data-theme="dark"] .el-input-number__decrease,
+:root[data-theme="dark"] .el-input-number__increase {
+  background: rgba(22, 43, 67, 0.95);
+  border-color: rgba(78, 114, 156, 0.62);
+  color: #d7e9ff;
+}
+
+:root[data-theme="dark"] .el-input-group__append,
+:root[data-theme="dark"] .el-input-group__prepend {
+  background-color: rgba(22, 43, 67, 0.92);
+  border-color: rgba(78, 114, 156, 0.62);
+  color: #c9e0ff;
+}
+
+:root[data-theme="dark"] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--danger):not(.el-button--warning):not(.is-text):not(.is-link) {
+  --el-button-bg-color: rgba(21, 40, 63, 0.86);
+  --el-button-border-color: rgba(88, 122, 161, 0.72);
+  --el-button-text-color: #d7e8ff;
+  --el-button-hover-bg-color: rgba(30, 53, 80, 0.92);
+  --el-button-hover-border-color: #7eaef2;
+  --el-button-hover-text-color: #eaf4ff;
+  --el-button-active-bg-color: rgba(34, 59, 88, 0.96);
+  --el-button-active-border-color: #8bb6f3;
+}
+
+:root[data-theme="dark"] .el-button--primary,
+:root[data-theme="dark"] .el-button--success {
+  --el-button-text-color: #071423;
+}
+
 :root[data-theme="dark"] .stat-pill,
 :root[data-theme="dark"] .overview-stat-pill,
 :root[data-theme="dark"] .pulse-stat-pill,
