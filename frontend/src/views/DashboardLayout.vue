@@ -42,17 +42,23 @@
           <h2>{{ pageTitle }}</h2>
         </div>
         <div class="topbar-actions">
-          <el-badge class="topbar-badge" :hidden="!showNotificationBadge || unreadNoticeCount <= 0" :value="unreadNoticeCount">
-            <el-button class="ghost-btn icon-btn" circle @click="openNotifications">
-              <el-icon><Bell /></el-icon>
+          <span class="topbar-icon-slot">
+            <el-badge class="topbar-badge" :hidden="!showNotificationBadge || unreadNoticeCount <= 0" :value="unreadNoticeCount">
+              <el-button class="ghost-btn icon-btn" circle @click="openNotifications">
+                <el-icon><Bell /></el-icon>
+              </el-button>
+            </el-badge>
+          </span>
+          <span class="topbar-icon-slot">
+            <el-button class="ghost-btn icon-btn" circle @click="openMessages">
+              <el-icon><Message /></el-icon>
             </el-button>
-          </el-badge>
-          <el-button class="ghost-btn icon-btn" circle @click="openMessages">
-            <el-icon><Message /></el-icon>
-          </el-button>
-          <el-button class="ghost-btn icon-btn" circle @click="settingsVisible = true">
-            <el-icon><Setting /></el-icon>
-          </el-button>
+          </span>
+          <span class="topbar-icon-slot">
+            <el-button class="ghost-btn icon-btn" circle @click="settingsVisible = true">
+              <el-icon><Setting /></el-icon>
+            </el-button>
+          </span>
 
           <el-dropdown trigger="click" @command="onAvatarCommand">
             <button class="user-trigger" type="button">
