@@ -818,9 +818,9 @@ a {
   flex-direction: column;
   padding: 20px 16px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(74, 137, 255, 0.2), transparent 44%),
-    linear-gradient(180deg, #122845 0%, #10223c 100%);
-  border-right: 1px solid rgba(156, 187, 228, 0.22);
+    radial-gradient(circle at 0% 0%, rgba(160, 198, 246, 0.18), transparent 44%),
+    linear-gradient(180deg, #4579c7 0%, #3969b6 100%);
+  border-right: 1px solid rgba(50, 93, 161, 0.58);
 }
 
 .brand-block {
@@ -833,7 +833,7 @@ a {
 
 .brand-kicker {
   margin: 0;
-  color: rgba(193, 219, 255, 0.82);
+  color: rgba(224, 238, 255, 0.88);
   font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
@@ -841,14 +841,14 @@ a {
 
 .brand-block h1 {
   margin: 8px 0 4px;
-  color: #e7f2ff;
+  color: #f2f8ff;
   font-size: 1.48rem;
   font-family: var(--font-heading);
   line-height: 1.04;
 }
 
 .brand-block span {
-  color: rgba(196, 223, 255, 0.88);
+  color: rgba(227, 240, 255, 0.9);
   font-size: 0.84rem;
 }
 
@@ -864,13 +864,13 @@ a {
   margin: 0;
   height: 44px;
   line-height: 44px;
-  color: rgba(205, 226, 255, 0.85);
+  color: rgba(228, 241, 255, 0.92);
   font-weight: 500;
 }
 
 .nav-menu .el-menu-item:hover {
-  color: #f1f7ff;
-  background: rgba(145, 184, 242, 0.22) !important;
+  color: #ffffff;
+  background: rgba(161, 197, 247, 0.2) !important;
 }
 
 .nav-menu .el-menu-item.is-active {
@@ -884,9 +884,9 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: rgba(209, 229, 255, 0.92);
+  color: rgba(234, 245, 255, 0.95);
   font-size: 0.79rem;
-  background: rgba(145, 183, 238, 0.18);
+  background: rgba(136, 179, 239, 0.24);
   border-radius: 999px;
   padding: 7px 11px;
 }
@@ -895,6 +895,44 @@ a {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  background: #7af2ff;
+  box-shadow: 0 0 0 6px rgba(122, 242, 255, 0.14);
+}
+
+:root[data-theme="dark"] .dashboard-sidebar {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(74, 137, 255, 0.2), transparent 44%),
+    linear-gradient(180deg, #122845 0%, #10223c 100%);
+  border-right: 1px solid rgba(156, 187, 228, 0.22);
+}
+
+:root[data-theme="dark"] .brand-kicker {
+  color: rgba(193, 219, 255, 0.82);
+}
+
+:root[data-theme="dark"] .brand-block h1 {
+  color: #e7f2ff;
+}
+
+:root[data-theme="dark"] .brand-block span {
+  color: rgba(196, 223, 255, 0.88);
+}
+
+:root[data-theme="dark"] .nav-menu .el-menu-item {
+  color: rgba(205, 226, 255, 0.85);
+}
+
+:root[data-theme="dark"] .nav-menu .el-menu-item:hover {
+  color: #f1f7ff;
+  background: rgba(145, 184, 242, 0.22) !important;
+}
+
+:root[data-theme="dark"] .sidebar-foot {
+  color: rgba(209, 229, 255, 0.92);
+  background: rgba(145, 183, 238, 0.18);
+}
+
+:root[data-theme="dark"] .sidebar-foot .dot {
   background: #57e6ff;
   box-shadow: 0 0 0 6px rgba(87, 230, 255, 0.2);
 }
