@@ -1,8 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
 
 :root {
-  --bg-canvas: #101f35;
-  --bg-tint: #1a2f4e;
+  --bg-canvas: #e8f3ff;
+  --bg-tint: #d8eaff;
   --surface: #eff6ff;
   --surface-muted: #e6f0ff;
   --ink: #14253c;
@@ -22,9 +22,9 @@
   --font-heading: "Space Grotesk", "IBM Plex Sans", "PingFang SC", sans-serif;
   --font-body: "IBM Plex Sans", "Noto Sans SC", "PingFang SC", sans-serif;
   --page-bg:
-    radial-gradient(circle at 14% -8%, rgba(62, 131, 255, 0.24), transparent 36%),
-    radial-gradient(circle at 86% -12%, rgba(40, 200, 220, 0.18), transparent 34%),
-    linear-gradient(160deg, #11233d 0%, #173152 48%, #152a48 100%);
+    radial-gradient(circle at 14% -8%, rgba(96, 170, 255, 0.32), transparent 38%),
+    radial-gradient(circle at 86% -12%, rgba(99, 218, 236, 0.24), transparent 36%),
+    linear-gradient(160deg, #f0f7ff 0%, #e2f0ff 50%, #d8eaff 100%);
   color-scheme: light;
 }
 
@@ -60,7 +60,7 @@ body,
 
 html {
   background: var(--page-bg);
-  background-color: #11233d;
+  background-color: var(--bg-canvas);
   overscroll-behavior-y: none;
   overflow: hidden;
 }
@@ -70,7 +70,7 @@ body {
   font-family: var(--font-body);
   color: var(--ink);
   background: var(--page-bg);
-  background-color: #11233d;
+  background-color: var(--bg-canvas);
   background-repeat: no-repeat;
   background-attachment: scroll;
   overflow: hidden;
@@ -662,6 +662,33 @@ a {
 
 .el-dialog__body {
   padding-top: 8px;
+}
+
+:root[data-theme="light"] .el-drawer {
+  background: linear-gradient(180deg, rgba(243, 249, 255, 0.96), rgba(232, 243, 255, 0.94));
+  color: #173a61;
+}
+
+:root[data-theme="light"] .el-drawer__header {
+  border-bottom: 1px solid rgba(162, 188, 224, 0.46);
+  margin-bottom: 0;
+  padding-bottom: 14px;
+}
+
+:root[data-theme="dark"] .el-drawer {
+  background: linear-gradient(180deg, rgba(14, 29, 47, 0.98), rgba(12, 24, 39, 0.96));
+  color: #dfeeff;
+}
+
+:root[data-theme="dark"] .el-drawer__header {
+  border-bottom: 1px solid rgba(78, 114, 156, 0.5);
+  margin-bottom: 0;
+  padding-bottom: 14px;
+}
+
+:root[data-theme="dark"] .el-drawer__title,
+:root[data-theme="dark"] .el-drawer__close-btn {
+  color: #dfeeff;
 }
 
 :root[data-theme="dark"] .card {
