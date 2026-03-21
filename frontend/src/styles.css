@@ -25,6 +25,27 @@
     radial-gradient(circle at 14% -8%, rgba(62, 131, 255, 0.24), transparent 36%),
     radial-gradient(circle at 86% -12%, rgba(40, 200, 220, 0.18), transparent 34%),
     linear-gradient(160deg, #11233d 0%, #173152 48%, #152a48 100%);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg-canvas: #071423;
+  --bg-tint: #0e2238;
+  --surface: #0f1f33;
+  --surface-muted: #13253b;
+  --ink: #e4efff;
+  --ink-soft: #9bb3cf;
+  --line: #2f4868;
+  --brand: #62a1ff;
+  --brand-soft: #8bb9ff;
+  --brand-deep: #82b5ff;
+  --accent: #42d5ea;
+  --accent-deep: #79e4f3;
+  --page-bg:
+    radial-gradient(circle at 14% -8%, rgba(46, 108, 216, 0.35), transparent 36%),
+    radial-gradient(circle at 86% -12%, rgba(38, 168, 186, 0.26), transparent 34%),
+    linear-gradient(160deg, #081526 0%, #0c1d31 52%, #0a1a2d 100%);
+  color-scheme: dark;
 }
 
 * {
@@ -641,6 +662,118 @@ a {
 
 .el-dialog__body {
   padding-top: 8px;
+}
+
+:root[data-theme="dark"] .card {
+  background: linear-gradient(162deg, rgba(16, 33, 53, 0.92), rgba(14, 28, 45, 0.88));
+  border-color: rgba(72, 106, 146, 0.5);
+}
+
+:root[data-theme="dark"] .card h3 {
+  color: #e2eeff;
+}
+
+:root[data-theme="dark"] .panel-desc,
+:root[data-theme="dark"] .table-empty-note,
+:root[data-theme="dark"] .topbar-kicker,
+:root[data-theme="dark"] .metric-axis-labels {
+  color: #9fb7d5;
+}
+
+:root[data-theme="dark"] .dashboard-topbar {
+  border-color: rgba(78, 114, 156, 0.5);
+  background: rgba(16, 33, 53, 0.78);
+  box-shadow: 0 12px 24px rgba(4, 10, 20, 0.35);
+}
+
+:root[data-theme="dark"] .dashboard-breadcrumb .el-breadcrumb__inner {
+  color: #98b2d4;
+}
+
+:root[data-theme="dark"] .dashboard-breadcrumb .el-breadcrumb__inner a,
+:root[data-theme="dark"] .dashboard-breadcrumb .el-breadcrumb__inner.is-link {
+  color: #7bdff0;
+}
+
+:root[data-theme="dark"] .ghost-btn,
+:root[data-theme="dark"] .user-trigger {
+  border-color: rgba(88, 122, 161, 0.72);
+  background: rgba(19, 37, 59, 0.74);
+  color: #d9e8ff;
+}
+
+:root[data-theme="dark"] .ghost-btn:hover,
+:root[data-theme="dark"] .user-trigger:hover {
+  border-color: #7eaef2;
+  background: rgba(27, 48, 74, 0.9);
+  color: #e8f2ff;
+}
+
+:root[data-theme="dark"] .settings-item {
+  border-color: rgba(77, 111, 151, 0.65);
+  background: rgba(19, 37, 59, 0.68);
+}
+
+:root[data-theme="dark"] .settings-item > span {
+  color: #d7e8ff;
+}
+
+:root[data-theme="dark"] .stat-pill,
+:root[data-theme="dark"] .overview-stat-pill,
+:root[data-theme="dark"] .pulse-stat-pill,
+:root[data-theme="dark"] .metric-quick-stat,
+:root[data-theme="dark"] .info-chip,
+:root[data-theme="dark"] .team-permission-card,
+:root[data-theme="dark"] .config-block,
+:root[data-theme="dark"] .metric-chart-card,
+:root[data-theme="dark"] .pulse-chart-card,
+:root[data-theme="dark"] .app-rank-item {
+  border-color: rgba(77, 111, 151, 0.65);
+  background: rgba(20, 39, 62, 0.74);
+}
+
+:root[data-theme="dark"] .stat-pill strong,
+:root[data-theme="dark"] .overview-stat-pill strong,
+:root[data-theme="dark"] .pulse-stat-pill strong,
+:root[data-theme="dark"] .metric-quick-stat strong,
+:root[data-theme="dark"] .app-rank-head strong,
+:root[data-theme="dark"] .config-block-title,
+:root[data-theme="dark"] .team-permission-card h4,
+:root[data-theme="dark"] .data-table .cell {
+  color: #e2eeff;
+}
+
+:root[data-theme="dark"] .stat-pill span,
+:root[data-theme="dark"] .overview-stat-pill span,
+:root[data-theme="dark"] .pulse-stat-pill span,
+:root[data-theme="dark"] .metric-quick-stat span,
+:root[data-theme="dark"] .app-rank-head span,
+:root[data-theme="dark"] .app-rank-head em,
+:root[data-theme="dark"] .team-permission-card ul,
+:root[data-theme="dark"] .info-chip {
+  color: #a6bfdb;
+}
+
+:root[data-theme="dark"] .data-table.el-table {
+  --el-table-header-bg-color: #1a2d48;
+  --el-table-header-text-color: #dbeaff;
+  --el-table-border-color: #355476;
+  --el-table-row-hover-bg-color: #203656;
+  --el-table-current-row-bg-color: #234064;
+  --el-table-tr-bg-color: #152840;
+  --el-bg-color: #152840;
+  background: rgba(19, 37, 59, 0.76);
+}
+
+:root[data-theme="dark"] .data-table.el-table .el-table__inner-wrapper,
+:root[data-theme="dark"] .data-table.el-table .el-table__header-wrapper,
+:root[data-theme="dark"] .data-table.el-table .el-table__body-wrapper,
+:root[data-theme="dark"] .data-table.el-table .el-table__cell {
+  background-color: rgba(20, 39, 62, 0.8);
+}
+
+:root[data-theme="dark"] .data-table.el-table th.el-table__cell {
+  background-color: #1a2d48;
 }
 
 .dashboard-shell {

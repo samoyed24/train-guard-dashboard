@@ -42,6 +42,7 @@ export const messages = {
       languageSetting: "界面语言",
       showApiModeBadge: "显示 API 模式标记",
       showNotificationBadge: "显示通知角标",
+      themeMode: "主题模式",
     },
     auth: {
       loginTitle: "欢迎登录",
@@ -312,6 +313,7 @@ export const messages = {
       languageSetting: "Interface Language",
       showApiModeBadge: "Show API mode badge",
       showNotificationBadge: "Show notification badge",
+      themeMode: "Theme Mode",
     },
     auth: {
       loginTitle: "Welcome Back",

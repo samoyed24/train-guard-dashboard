@@ -91,7 +91,11 @@
 
     <el-drawer v-model="settingsVisible" :title="t('layout.settingsTitle')" size="360px" append-to-body>
       <p class="settings-intro">{{ t("layout.settingsIntro") }}</p>
-      <div class="settings-list">
+        <div class="settings-list">
+        <div class="settings-item">
+          <span>{{ t("layout.themeMode") }}</span>
+          <el-switch v-model="isDarkMode" :active-action-icon="Moon" :inactive-action-icon="Sunny" />
+        </div>
         <div class="settings-item">
           <span>{{ t("layout.languageSetting") }}</span>
           <el-radio-group v-model="selectedLocale" size="small" @change="onLocaleChange">
@@ -116,7 +120,7 @@
 import { computed, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ArrowDown, Bell, Message, Setting } from "@element-plus/icons-vue";
+import { ArrowDown, Bell, Message, Setting, Moon, Sunny } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import { setLocale, type AppLocale } from "../i18n";
 import { useAuthStore } from "../stores/auth";
@@ -132,6 +136,7 @@ const settingsVisible = ref(false);
 const unreadNoticeCount = ref(3);
 const showApiModeBadge = ref(readBool("ui_show_api_mode_badge", true));
 const showNotificationBadge = ref(readBool("ui_show_notification_badge", true));
+const isDarkMode = ref(readThemeMode() === "dark");
 
 const breadcrumbItems = computed(() => {
   return route.matched
@@ -151,6 +156,17 @@ function readBool(key: string, fallback: boolean): boolean {
   return raw === "1";
 }
 
+function readThemeMode(): "light" | "dark" {
+  const stored = localStorage.getItem("ui_theme_mode");
+  if (stored === "light" || stored === "dark") return stored;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function applyTheme(isDark: boolean) {
+  document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+  localStorage.setItem("ui_theme_mode", isDark ? "dark" : "light");
+}
+
 const onLocaleChange = (value: AppLocale) => {
   setLocale(value);
   selectedLocale.value = value;
@@ -163,6 +179,14 @@ watch(showApiModeBadge, (value) => {
 watch(showNotificationBadge, (value) => {
   localStorage.setItem("ui_show_notification_badge", value ? "1" : "0");
 });
+
+watch(
+  isDarkMode,
+  (value) => {
+    applyTheme(value);
+  },
+  { immediate: true },
+);
 
 const openNotifications = () => {
   ElMessage.info(t("layout.notificationsPlaceholder"));
