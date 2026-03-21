@@ -317,6 +317,7 @@ const state = {
   issuedTokens: new Map<string, number>(),
   blacklistedTokens: new Set<string>(),
   activeConfigCache: new Map<string, JsonObject>(),
+  registerEmailCodes: new Map<string, string>(),
   nextIds: {
     user: 3,
     team: 2,
@@ -345,6 +346,10 @@ export async function handleMockRequest(request: MockRequest): Promise<MockRespo
 
   if (method === "POST" && path === "/api/auth/register") {
     return register(request.body);
+  }
+
+  if (method === "POST" && path === "/api/auth/register/email-code") {
+    return sendRegisterEmailCode(request.body);
   }
 
   if (method === "POST" && path === "/api/auth/login") {
@@ -897,13 +902,19 @@ function register(body: unknown): MockResponse {
   const email = asString(payload?.email).trim().toLowerCase();
   const name = asString(payload?.name).trim();
   const password = asString(payload?.password);
+  const verificationCode = asString(payload?.verification_code).trim();
 
-  if (!email || !name || password.length < 6) {
-    return fail(400, "name/email/password(>=6) required");
+  if (!email || !name || password.length < 6 || !verificationCode) {
+    return fail(400, "name/email/password(>=6)/verification_code required");
   }
 
   if (state.users.some((item) => item.email === email)) {
     return fail(409, "Email already exists");
+  }
+
+  const savedCode = state.registerEmailCodes.get(email);
+  if (!savedCode || savedCode !== verificationCode) {
+    return fail(400, "Invalid or expired verification code");
   }
 
   const user: MockUser = {
@@ -915,7 +926,24 @@ function register(body: unknown): MockResponse {
   };
 
   state.users.push(user);
+  state.registerEmailCodes.delete(email);
   return response(201, { message: "ok" });
+}
+
+function sendRegisterEmailCode(body: unknown): MockResponse {
+  const payload = asObject(body);
+  const email = asString(payload?.email).trim().toLowerCase();
+  if (!email || !email.includes("@")) {
+    return fail(400, "valid email required");
+  }
+
+  if (state.users.some((item) => item.email === email)) {
+    return fail(409, "Email already exists");
+  }
+
+  const code = `${Math.floor(Math.random() * 1_000_000)}`.padStart(6, "0");
+  state.registerEmailCodes.set(email, code);
+  return ok({ message: "ok" });
 }
 
 function login(body: unknown): MockResponse {

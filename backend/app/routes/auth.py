@@ -1,10 +1,59 @@
-from flask import Blueprint, g, jsonify, request
+import random
 
+from flask import Blueprint, current_app, g, jsonify, request
+
+from ..email_client import send_email
 from ..extensions import db
 from ..models import Team, TeamMember, User
+from ..redis_client import redis_delete, redis_get, redis_setex
 from ..security import auth_required, blacklist_token, generate_token, hash_password, verify_password
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
+
+
+def register_email_code_key(email: str) -> str:
+    return f"auth:register:email_code:{email}"
+
+
+def register_email_code_cooldown_key(email: str) -> str:
+    return f"auth:register:email_code:cooldown:{email}"
+
+
+def generate_email_code() -> str:
+    return f"{random.randint(0, 999999):06d}"
+
+
+@auth_bp.post("/register/email-code")
+def send_register_email_code():
+    data = request.get_json() or {}
+    email = (data.get("email") or "").strip().lower()
+
+    if not email or "@" not in email:
+        return jsonify({"message": "valid email required"}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({"message": "Email already exists"}), 409
+
+    cooldown_key = register_email_code_cooldown_key(email)
+    if redis_get(cooldown_key):
+        return jsonify({"message": "Please wait before requesting another code"}), 429
+
+    code = generate_email_code()
+    ttl_seconds = current_app.config["EMAIL_CODE_TTL_SECONDS"]
+    cooldown_seconds = current_app.config["EMAIL_CODE_COOLDOWN_SECONDS"]
+    redis_setex(register_email_code_key(email), ttl_seconds, code)
+    redis_setex(cooldown_key, cooldown_seconds, "1")
+
+    subject = "Train Guard 注册验证码"
+    body = f"你的注册验证码是：{code}。\n\n验证码 {ttl_seconds} 秒内有效。"
+    try:
+        send_email(email, subject, body)
+    except Exception:
+        # Sending failed; revoke generated code to avoid stale records in Redis.
+        redis_delete(register_email_code_key(email))
+        return jsonify({"message": "Failed to send verification email"}), 500
+
+    return jsonify({"message": "ok"})
 
 
 @auth_bp.post("/register")
@@ -13,16 +62,22 @@ def register():
     email = (data.get("email") or "").strip().lower()
     name = (data.get("name") or "").strip()
     password = data.get("password") or ""
+    verification_code = (data.get("verification_code") or "").strip()
 
-    if not email or not name or len(password) < 6:
-        return jsonify({"message": "name/email/password(>=6) required"}), 400
+    if not email or not name or len(password) < 6 or not verification_code:
+        return jsonify({"message": "name/email/password(>=6)/verification_code required"}), 400
 
     if User.query.filter_by(email=email).first():
         return jsonify({"message": "Email already exists"}), 409
 
+    saved_code = redis_get(register_email_code_key(email))
+    if not saved_code or saved_code != verification_code:
+        return jsonify({"message": "Invalid or expired verification code"}), 400
+
     user = User(email=email, name=name, password_hash=hash_password(password))
     db.session.add(user)
     db.session.commit()
+    redis_delete(register_email_code_key(email))
 
     # Bootstrap a default team for the very first account so team invitation flow is usable immediately.
     if Team.query.count() == 0:

@@ -21,6 +21,10 @@ def redis_setex(key: str, ttl_seconds: int, value: str):
     return get_redis().setex(key, ttl_seconds, value)
 
 
+def redis_delete(key: str):
+    return get_redis().delete(key)
+
+
 def redis_set_json(key: str, value: dict, ttl_seconds: int = 3600):
     return redis_setex(key, ttl_seconds, json.dumps(value, ensure_ascii=False))
 

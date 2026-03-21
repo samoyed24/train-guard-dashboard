@@ -44,6 +44,9 @@ uv run python run.py
   - `REDIS_URL`
   - `CORS_ORIGINS`
   - `JWT_EXPIRES_MINUTES`
+  - `EMAIL_CODE_TTL_SECONDS`
+  - `EMAIL_CODE_COOLDOWN_SECONDS`
+  - `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_USE_TLS` / `SMTP_FROM_EMAIL`
 
 ## 常用 uv 命令
 
@@ -61,6 +64,7 @@ uv sync
 ## 关键接口
 
 - `POST /api/auth/register`
+- `POST /api/auth/register/email-code`
 - `POST /api/auth/login`
 - `GET /api/auth/me`
 - `POST /api/apps`
