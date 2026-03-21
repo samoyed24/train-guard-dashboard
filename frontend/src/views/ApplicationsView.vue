@@ -4,36 +4,36 @@
       <div class="panel-head">
         <div>
           <p class="panel-kicker">Applications</p>
-          <h3>应用管理</h3>
-          <p class="panel-desc">创建并管理训练应用，系统会为每个应用生成唯一 app_id 与 app_secret。</p>
+          <h3>{{ t("apps.title") }}</h3>
+          <p class="panel-desc">{{ t("apps.desc") }}</p>
         </div>
-        <el-button type="primary" @click="openCreate">新建应用</el-button>
+        <el-button type="primary" @click="openCreate">{{ t("apps.createApp") }}</el-button>
       </div>
 
       <div class="stat-strip">
         <div class="stat-pill">
-          <span>应用总数</span>
+          <span>{{ t("apps.appTotal") }}</span>
           <strong>{{ apps.length }}</strong>
         </div>
         <div class="stat-pill">
-          <span>最新 App ID</span>
+          <span>{{ t("apps.latestAppId") }}</span>
           <strong class="mono-text">{{ latestAppId }}</strong>
         </div>
         <div class="stat-pill">
-          <span>凭证状态</span>
-          <strong>已启用</strong>
+          <span>{{ t("apps.credentialStatus") }}</span>
+          <strong>{{ t("common.enabled") }}</strong>
         </div>
       </div>
 
-      <el-table class="data-table" :data="apps" border empty-text="暂无应用，点击右上角创建">
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="name" label="应用名" min-width="160" />
-        <el-table-column prop="app_id" label="App ID" min-width="220">
+      <el-table class="data-table" :data="apps" border :empty-text="t('apps.noApps')">
+        <el-table-column prop="id" :label="t('apps.id')" width="70" />
+        <el-table-column prop="name" :label="t('apps.appName')" min-width="160" />
+        <el-table-column prop="app_id" :label="t('apps.appId')" min-width="220">
           <template #default="scope">
             <span class="mono-text">{{ scope.row.app_id }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" min-width="180">
+        <el-table-column prop="created_at" :label="t('apps.createdAt')" min-width="180">
           <template #default="scope">
             {{ formatDate(scope.row.created_at) }}
           </template>
@@ -41,20 +41,20 @@
       </el-table>
     </section>
 
-    <el-dialog v-model="visible" title="新建应用" width="460px" destroy-on-close>
+    <el-dialog v-model="visible" :title="t('apps.createDialogTitle')" width="460px" destroy-on-close>
       <el-form :model="form" label-width="88px">
-        <el-form-item label="应用名">
-          <el-input v-model="form.name" placeholder="例如：image-classifier" />
+        <el-form-item :label="t('apps.appName')">
+          <el-input v-model="form.name" :placeholder="t('apps.appNamePlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="visible = false">取消</el-button>
-        <el-button type="primary" @click="create">创建</el-button>
+        <el-button @click="visible = false">{{ t("common.cancel") }}</el-button>
+        <el-button type="primary" @click="create">{{ t("common.create") }}</el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="secretVisible" title="应用密钥（仅显示一次）" width="680px">
-      <el-alert type="warning" show-icon :closable="false" title="请妥善保存 app_secret，后续不会再次明文返回。" />
+    <el-dialog v-model="secretVisible" :title="t('apps.secretTitle')" width="680px">
+      <el-alert type="warning" show-icon :closable="false" :title="t('apps.secretWarning')" />
       <pre class="secret-output" style="margin-top: 12px;">{{ latestSecret }}</pre>
     </el-dialog>
   </div>
@@ -63,8 +63,10 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
+import { useI18n } from "vue-i18n";
 import http from "../api/http";
 
+const { t } = useI18n();
 const apps = ref<any[]>([]);
 const visible = ref(false);
 const secretVisible = ref(false);
@@ -90,7 +92,7 @@ const openCreate = () => {
 const create = async () => {
   const name = form.name.trim();
   if (!name) {
-    ElMessage.warning("请输入应用名");
+    ElMessage.warning(t("apps.inputAppName"));
     return;
   }
 
@@ -101,7 +103,7 @@ const create = async () => {
     visible.value = false;
     await loadApps();
   } catch (e: any) {
-    ElMessage.error(e?.response?.data?.message || "创建失败");
+    ElMessage.error(e?.response?.data?.message || t("apps.createFailed"));
   }
 };
 

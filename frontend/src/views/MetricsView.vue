@@ -4,27 +4,27 @@
       <div class="panel-head">
         <div>
           <p class="panel-kicker">Metrics</p>
-          <h3>训练数据</h3>
-          <p class="panel-desc">按应用选择训练 Run，并在下方按指标查看时序图表。</p>
+          <h3>{{ t("metrics.title") }}</h3>
+          <p class="panel-desc">{{ t("metrics.desc") }}</p>
         </div>
       </div>
 
       <div class="stat-strip">
         <div class="stat-pill">
-          <span>应用数</span>
+          <span>{{ t("metrics.appCount") }}</span>
           <strong>{{ apps.length }}</strong>
         </div>
         <div class="stat-pill">
-          <span>Run 数</span>
+          <span>{{ t("metrics.runCount") }}</span>
           <strong>{{ runs.length }}</strong>
         </div>
         <div class="stat-pill">
-          <span>当前指标点</span>
+          <span>{{ t("metrics.currentPoints") }}</span>
           <strong>{{ metricPoints.length }}</strong>
         </div>
       </div>
 
-      <el-select v-model="selectedAppId" placeholder="选择应用" class="app-select" @change="loadRuns">
+      <el-select v-model="selectedAppId" :placeholder="t('metrics.selectApp')" class="app-select" @change="loadRuns">
         <el-option v-for="item in apps" :key="item.id" :label="item.name + ' (' + item.app_id + ')'" :value="item.id" />
       </el-select>
 
@@ -33,27 +33,27 @@
         :data="runs"
         border
         highlight-current-row
-        empty-text="暂无训练运行记录"
+        :empty-text="t('metrics.noRuns')"
         :row-class-name="getRunRowClass"
         @row-click="onRunRowClick"
       >
-        <el-table-column prop="train_id" label="Train ID">
+        <el-table-column prop="train_id" :label="t('metrics.trainId')">
           <template #default="scope">
             <span class="run-id-pill" :class="{ 'is-active': scope.row.id === selectedRunId }">
               {{ scope.row.train_id }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="first_seen_at" label="首次上报" min-width="170">
+        <el-table-column prop="first_seen_at" :label="t('metrics.firstSeen')" min-width="170">
           <template #default="scope">{{ formatDate(scope.row.first_seen_at) }}</template>
         </el-table-column>
-        <el-table-column prop="last_seen_at" label="最近上报" min-width="170">
+        <el-table-column prop="last_seen_at" :label="t('metrics.lastSeen')" min-width="170">
           <template #default="scope">{{ formatDate(scope.row.last_seen_at) }}</template>
         </el-table-column>
       </el-table>
 
       <p class="table-empty-note run-hint" v-if="runs.length && !selectedRunId">
-        点击任意 Run 行，加载该 Run 的指标曲线。
+        {{ t("metrics.runHint") }}
       </p>
     </section>
 
@@ -61,39 +61,39 @@
       <div class="panel-head">
         <div>
           <p class="panel-kicker">Run Dashboard</p>
-          <h3>指标图表（{{ selectedRunTrainId || `Run ${selectedRunId}` }}）</h3>
-          <p class="panel-desc">按指标拆分查看趋势，支持快速切换 loss / acc / lr 等数值指标。</p>
+          <h3>{{ t("metrics.metricChartTitle", { run: selectedRunTrainId || t('metrics.runFallback', { id: selectedRunId }) }) }}</h3>
+          <p class="panel-desc">{{ t("metrics.metricChartDesc") }}</p>
         </div>
         <div class="chart-toolbar">
           <el-select
             v-model="selectedMetric"
             class="metric-select"
-            placeholder="选择指标"
+            :placeholder="t('metrics.selectMetric')"
             :disabled="!metricNames.length"
             @change="onMetricChange"
           >
             <el-option v-for="name in metricNames" :key="name" :label="name" :value="name" />
           </el-select>
-          <el-button class="ghost-btn" :disabled="!selectedRunId" @click="reloadSeries">刷新</el-button>
+          <el-button class="ghost-btn" :disabled="!selectedRunId" @click="reloadSeries">{{ t("common.refresh") }}</el-button>
         </div>
       </div>
 
       <div class="metric-board" v-loading="loadingSeries">
         <div class="metric-quick-stats">
           <div class="metric-quick-stat">
-            <span>当前指标</span>
+            <span>{{ t("metrics.currentMetric") }}</span>
             <strong>{{ selectedMetric || "-" }}</strong>
           </div>
           <div class="metric-quick-stat">
-            <span>最新值</span>
+            <span>{{ t("metrics.latestValue") }}</span>
             <strong>{{ latestValueLabel }}</strong>
           </div>
           <div class="metric-quick-stat">
-            <span>最小值</span>
+            <span>{{ t("metrics.minValue") }}</span>
             <strong>{{ minValueLabel }}</strong>
           </div>
           <div class="metric-quick-stat">
-            <span>最大值</span>
+            <span>{{ t("metrics.maxValue") }}</span>
             <strong>{{ maxValueLabel }}</strong>
           </div>
         </div>
@@ -128,11 +128,11 @@
           </div>
         </div>
 
-        <el-empty v-else description="该 Run 暂无可绘制的数值指标" />
+        <el-empty v-else :description="t('metrics.noNumericMetric')" />
       </div>
 
-      <el-table class="data-table table-wrap" :data="reversedMetricPoints" border empty-text="暂无指标点数据">
-        <el-table-column prop="event_time" label="时间" min-width="170">
+      <el-table class="data-table table-wrap" :data="reversedMetricPoints" border :empty-text="t('metrics.noPoints')">
+        <el-table-column prop="event_time" :label="t('metrics.time')" min-width="170">
           <template #default="scope">{{ formatDate(scope.row.event_time) }}</template>
         </el-table-column>
         <el-table-column prop="step" label="Step" width="100">
@@ -141,7 +141,11 @@
         <el-table-column prop="epoch" label="Epoch" width="100">
           <template #default="scope">{{ scope.row.epoch ?? "-" }}</template>
         </el-table-column>
-        <el-table-column prop="value" :label="selectedMetric ? `${selectedMetric} 值` : '值'" min-width="180">
+        <el-table-column
+          prop="value"
+          :label="selectedMetric ? t('metrics.metricValue', { metric: selectedMetric }) : t('metrics.value')"
+          min-width="180"
+        >
           <template #default="scope">{{ formatMetricValue(scope.row.value) }}</template>
         </el-table-column>
       </el-table>
@@ -152,6 +156,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
+import { useI18n } from "vue-i18n";
 import http from "../api/http";
 
 interface AppItem {
@@ -194,6 +199,7 @@ const chartWidth = 900;
 const chartHeight = 280;
 const chartPaddingX = 24;
 const chartPaddingY = 20;
+const { t } = useI18n();
 
 const apps = ref<AppItem[]>([]);
 const runs = ref<RunItem[]>([]);
@@ -272,8 +278,8 @@ const formatDate = (value: string) => {
 
 const formatXAxisLabel = (point: MetricPoint | undefined) => {
   if (!point) return "-";
-  if (point.step !== null && point.step !== undefined) return `step ${point.step}`;
-  if (point.epoch !== null && point.epoch !== undefined) return `epoch ${point.epoch}`;
+  if (point.step !== null && point.step !== undefined) return t("metrics.step", { value: point.step });
+  if (point.epoch !== null && point.epoch !== undefined) return t("metrics.epoch", { value: point.epoch });
   return formatDate(point.event_time);
 };
 
@@ -312,7 +318,7 @@ const loadApps = async () => {
 
     await loadRuns();
   } catch {
-    ElMessage.error("加载应用失败");
+    ElMessage.error(t("metrics.loadAppsFailed"));
   }
 };
 
@@ -336,7 +342,7 @@ const loadRuns = async () => {
     const nextRun = data.find((item) => item.id === previousRunId) ?? data[0];
     await selectRun(nextRun);
   } catch {
-    ElMessage.error("加载训练运行失败");
+    ElMessage.error(t("metrics.loadRunsFailed"));
   }
 };
 
@@ -375,7 +381,7 @@ const loadSeries = async (runId: number, metric?: string) => {
       }))
       .filter((item) => Number.isFinite(item.value));
   } catch {
-    ElMessage.error("加载指标失败");
+    ElMessage.error(t("metrics.loadMetricFailed"));
   } finally {
     loadingSeries.value = false;
   }

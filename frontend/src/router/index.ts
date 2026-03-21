@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { i18n } from "../i18n";
 import { useAuthStore } from "../stores/auth";
 
 import DashboardLayout from "../views/DashboardLayout.vue";
@@ -11,19 +12,19 @@ import MetricsView from "../views/MetricsView.vue";
 import TeamManagementView from "../views/TeamManagementView.vue";
 
 const routes = [
-  { path: "/login", component: LoginView, meta: { title: "登录" } },
-  { path: "/register", component: RegisterView, meta: { title: "注册" } },
+  { path: "/login", component: LoginView, meta: { titleKey: "routes.login" } },
+  { path: "/register", component: RegisterView, meta: { titleKey: "routes.register" } },
   {
     path: "/",
     component: DashboardLayout,
-    meta: { requiresAuth: true, title: "控制台" },
+    meta: { requiresAuth: true, titleKey: "routes.dashboard" },
     children: [
       { path: "", redirect: "/dashboard" },
-      { path: "dashboard", component: DashboardHomeView, meta: { title: "概览看板" } },
-      { path: "apps", component: ApplicationsView, meta: { title: "应用管理" } },
-      { path: "team", component: TeamManagementView, meta: { title: "团队管理" } },
-      { path: "configs", component: ConfigCenterView, meta: { title: "配置中心" } },
-      { path: "metrics", component: MetricsView, meta: { title: "训练数据" } },
+      { path: "dashboard", component: DashboardHomeView, meta: { titleKey: "routes.dashboardHome" } },
+      { path: "apps", component: ApplicationsView, meta: { titleKey: "routes.apps" } },
+      { path: "team", component: TeamManagementView, meta: { titleKey: "routes.team" } },
+      { path: "configs", component: ConfigCenterView, meta: { titleKey: "routes.configs" } },
+      { path: "metrics", component: MetricsView, meta: { titleKey: "routes.metrics" } },
     ],
   },
 ];
@@ -54,6 +55,11 @@ router.beforeEach(async (to) => {
   }
 
   return true;
+});
+
+router.afterEach((to) => {
+  const titleKey = typeof to.meta?.titleKey === "string" ? String(to.meta.titleKey) : "common.dashboard";
+  document.title = `${i18n.global.t(titleKey)} · ${i18n.global.t("common.appName")}`;
 });
 
 export default router;

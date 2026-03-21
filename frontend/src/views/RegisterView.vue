@@ -2,45 +2,43 @@
   <div class="auth-scene">
     <div class="auth-card">
       <aside class="auth-hero">
-        <p class="auth-kicker">Train Guard</p>
-        <h1>创建你的团队账号</h1>
-        <p>从这里开始管理模型训练应用、配置发布流程和指标回传链路。</p>
+        <p class="auth-kicker">{{ t("common.appName") }}</p>
+        <h1>{{ t("auth.heroRegisterTitle") }}</h1>
+        <p>{{ t("auth.heroRegisterDesc") }}</p>
         <ul class="auth-points">
-          <li>支持多应用隔离管理</li>
-          <li>统一配置下发给 Agent</li>
-          <li>保留训练上报历史数据</li>
+          <li v-for="point in heroPoints" :key="point">{{ point }}</li>
         </ul>
       </aside>
 
       <section class="auth-form-panel">
-        <h2>注册账号</h2>
-        <p>填写信息后即可创建新账号。</p>
+        <h2>{{ t("auth.registerTitle") }}</h2>
+        <p>{{ t("auth.registerDesc") }}</p>
         <el-form class="auth-form" :model="form" label-width="72px" @submit.prevent>
-          <el-form-item label="姓名">
-            <el-input v-model="form.name" placeholder="请输入姓名" />
+          <el-form-item :label="t('auth.name')">
+            <el-input v-model="form.name" :placeholder="t('auth.inputName')" />
           </el-form-item>
-          <el-form-item label="邮箱">
+          <el-form-item :label="t('auth.email')">
             <el-input v-model="form.email" placeholder="you@example.com" />
           </el-form-item>
-          <el-form-item label="验证码">
+          <el-form-item :label="t('auth.verificationCode')">
             <el-row :gutter="10" style="width: 100%">
               <el-col :span="15">
-                <el-input v-model="form.verificationCode" placeholder="请输入 6 位验证码" maxlength="6" />
+                <el-input v-model="form.verificationCode" :placeholder="t('auth.inputCode')" maxlength="6" />
               </el-col>
               <el-col :span="9">
                 <el-button :loading="sendingCode" :disabled="countdown > 0" style="width: 100%" @click="onSendCode">
-                  {{ countdown > 0 ? `${countdown}s 后重试` : "发送验证码" }}
+                  {{ countdown > 0 ? t("auth.retryAfter", { seconds: countdown }) : t("auth.sendCode") }}
                 </el-button>
               </el-col>
             </el-row>
           </el-form-item>
-          <el-form-item label="密码">
-            <el-input v-model="form.password" show-password type="password" placeholder="至少 6 位" />
+          <el-form-item :label="t('auth.password')">
+            <el-input v-model="form.password" show-password type="password" :placeholder="t('auth.passwordHint')" />
           </el-form-item>
-          <el-button type="primary" @click="onSubmit">创建账号</el-button>
+          <el-button type="primary" @click="onSubmit">{{ t("auth.register") }}</el-button>
         </el-form>
         <p class="auth-link">
-          已有账号？<router-link to="/login">去登录</router-link>
+          {{ t("auth.hasAccount") }}<router-link to="/login">{{ t("auth.goLogin") }}</router-link>
         </p>
       </section>
     </div>
@@ -48,17 +46,20 @@
 </template>
 
 <script setup lang="ts">
-import { onUnmounted, reactive, ref } from "vue";
+import { computed, onUnmounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
+import { useI18n } from "vue-i18n";
 import { useAuthStore } from "../stores/auth";
 
 const router = useRouter();
 const auth = useAuthStore();
+const { t, tm } = useI18n();
 const form = reactive({ name: "", email: "", verificationCode: "", password: "" });
 const sendingCode = ref(false);
 const countdown = ref(0);
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
+const heroPoints = computed(() => tm("auth.heroRegisterPoints") as string[]);
 
 const startCountdown = (seconds = 60) => {
   countdown.value = seconds;
@@ -81,17 +82,17 @@ const startCountdown = (seconds = 60) => {
 const onSendCode = async () => {
   const email = form.email.trim().toLowerCase();
   if (!email || !email.includes("@")) {
-    ElMessage.warning("请先输入有效邮箱");
+    ElMessage.warning(t("auth.emailInvalid"));
     return;
   }
 
   sendingCode.value = true;
   try {
     await auth.sendRegisterEmailCode(email);
-    ElMessage.success("验证码已发送，请查收邮箱");
+    ElMessage.success(t("auth.sendCodeSuccess"));
     startCountdown(60);
   } catch (e: any) {
-    ElMessage.error(e?.response?.data?.message || "发送验证码失败");
+    ElMessage.error(e?.response?.data?.message || t("auth.sendCodeFailed"));
   } finally {
     sendingCode.value = false;
   }
@@ -100,10 +101,10 @@ const onSendCode = async () => {
 const onSubmit = async () => {
   try {
     await auth.register(form.name, form.email, form.password, form.verificationCode);
-    ElMessage.success("注册成功，请登录");
+    ElMessage.success(t("auth.registerSuccess"));
     router.push("/login");
   } catch (e: any) {
-    ElMessage.error(e?.response?.data?.message || "注册失败");
+    ElMessage.error(e?.response?.data?.message || t("auth.registerFailed"));
   }
 };
 

@@ -4,30 +4,30 @@
       <div class="panel-head">
         <div>
           <p class="panel-kicker">Dashboard</p>
-          <h3>训练全局概览</h3>
-          <p class="panel-desc">统一查看应用、训练运行和最新指标活动，快速进入重点异常 Run。</p>
+          <h3>{{ t("dashboard.title") }}</h3>
+          <p class="panel-desc">{{ t("dashboard.desc") }}</p>
         </div>
         <div class="action-row">
-          <el-button class="ghost-btn" @click="loadOverview">刷新数据</el-button>
-          <el-button type="primary" @click="goMetrics">查看训练数据</el-button>
+          <el-button class="ghost-btn" @click="loadOverview">{{ t("dashboard.refreshData") }}</el-button>
+          <el-button type="primary" @click="goMetrics">{{ t("dashboard.gotoMetrics") }}</el-button>
         </div>
       </div>
 
       <div class="overview-stats">
         <div class="overview-stat-pill">
-          <span>应用总数</span>
+          <span>{{ t("dashboard.appsTotal") }}</span>
           <strong>{{ apps.length }}</strong>
         </div>
         <div class="overview-stat-pill">
-          <span>Run 总数</span>
+          <span>{{ t("dashboard.runsTotal") }}</span>
           <strong>{{ allRuns.length }}</strong>
         </div>
         <div class="overview-stat-pill">
-          <span>24h 活跃 Run</span>
+          <span>{{ t("dashboard.runs24h") }}</span>
           <strong>{{ activeRuns24h }}</strong>
         </div>
         <div class="overview-stat-pill">
-          <span>最近上报</span>
+          <span>{{ t("dashboard.latestReport") }}</span>
           <strong>{{ latestReportLabel }}</strong>
         </div>
       </div>
@@ -39,7 +39,7 @@
           <div class="panel-head">
             <div>
               <p class="panel-kicker">Top Apps</p>
-              <h3>应用活跃度排名</h3>
+              <h3>{{ t("dashboard.topApps") }}</h3>
             </div>
           </div>
 
@@ -56,32 +56,32 @@
             </div>
           </div>
 
-          <el-empty v-else description="暂无应用活跃数据" />
+          <el-empty v-else :description="t('dashboard.noActivityData')" />
         </div>
 
         <div class="overview-col">
           <div class="panel-head">
             <div>
               <p class="panel-kicker">Recent Runs</p>
-              <h3>最近运行</h3>
+              <h3>{{ t("dashboard.recentRuns") }}</h3>
             </div>
-            <el-button class="ghost-btn" size="small" @click="goApps">管理应用</el-button>
+            <el-button class="ghost-btn" size="small" @click="goApps">{{ t("dashboard.manageApps") }}</el-button>
           </div>
 
           <el-table
             class="data-table recent-runs-table"
             :data="recentRuns"
             border
-            empty-text="暂无运行数据"
+            :empty-text="t('dashboard.noRunData')"
             @row-click="onSelectRun"
           >
-            <el-table-column prop="appName" label="应用" min-width="120" />
+            <el-table-column prop="appName" :label="t('apps.appName')" min-width="120" />
             <el-table-column prop="train_id" label="Train ID" min-width="140" />
-            <el-table-column prop="last_seen_at" label="最近上报" min-width="160">
+            <el-table-column prop="last_seen_at" :label="t('dashboard.latestReport')" min-width="160">
               <template #default="scope">{{ formatDate(scope.row.last_seen_at) }}</template>
             </el-table-column>
           </el-table>
-          <p class="table-empty-note">点击某一行可切换下方指标脉搏。</p>
+          <p class="table-empty-note">{{ t("dashboard.runSelectHint") }}</p>
         </div>
       </div>
     </section>
@@ -90,29 +90,33 @@
       <div class="panel-head">
         <div>
           <p class="panel-kicker">Metric Pulse</p>
-          <h3>指标脉搏 {{ featuredMetricName ? `· ${featuredMetricName}` : "" }}</h3>
+          <h3>{{ t("dashboard.metricPulse", { metric: featuredMetricName ? `· ${featuredMetricName}` : "" }) }}</h3>
           <p class="panel-desc">
-            {{ featuredRun ? `当前运行：${featuredRun.appName} / ${featuredRun.train_id}` : "暂无可展示运行" }}
+            {{
+              featuredRun
+                ? t("dashboard.currentRun", { appName: featuredRun.appName, trainId: featuredRun.train_id })
+                : t("dashboard.noRunToShow")
+            }}
           </p>
         </div>
-        <el-button class="ghost-btn" :disabled="!featuredRun" @click="goMetrics">前往训练数据页</el-button>
+        <el-button class="ghost-btn" :disabled="!featuredRun" @click="goMetrics">{{ t("dashboard.gotoMetricsPage") }}</el-button>
       </div>
 
       <div class="pulse-summary" v-if="featuredRun">
         <div class="pulse-stat-pill">
-          <span>样本点</span>
+          <span>{{ t("dashboard.samplePoints") }}</span>
           <strong>{{ featuredMetricPoints.length }}</strong>
         </div>
         <div class="pulse-stat-pill">
-          <span>最新值</span>
+          <span>{{ t("metrics.latestValue") }}</span>
           <strong>{{ featuredLatestLabel }}</strong>
         </div>
         <div class="pulse-stat-pill">
-          <span>最小值</span>
+          <span>{{ t("metrics.minValue") }}</span>
           <strong>{{ featuredMinLabel }}</strong>
         </div>
         <div class="pulse-stat-pill">
-          <span>最大值</span>
+          <span>{{ t("metrics.maxValue") }}</span>
           <strong>{{ featuredMaxLabel }}</strong>
         </div>
       </div>
@@ -146,7 +150,7 @@
           </div>
         </template>
 
-        <el-empty v-else description="当前运行暂无可绘制指标" />
+        <el-empty v-else :description="t('metrics.noNumericMetric')" />
       </div>
     </section>
   </div>
@@ -156,6 +160,7 @@
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
+import { useI18n } from "vue-i18n";
 
 import http from "../api/http";
 
@@ -207,6 +212,7 @@ interface AppRunStat {
 }
 
 const router = useRouter();
+const { t } = useI18n();
 
 const pulseChartWidth = 900;
 const pulseChartHeight = 260;
@@ -353,7 +359,7 @@ const loadOverview = async () => {
 
     await loadFeaturedMetric(mergedRuns[0]);
   } catch (e: any) {
-    ElMessage.error(e?.response?.data?.message || "加载首页概览失败");
+    ElMessage.error(e?.response?.data?.message || t("dashboard.loadOverviewFailed"));
   } finally {
     loadingOverview.value = false;
   }
@@ -379,7 +385,7 @@ const loadFeaturedMetric = async (run: DashboardRunItem) => {
       }))
       .filter((point) => Number.isFinite(point.value));
   } catch {
-    ElMessage.warning("加载概览指标失败");
+    ElMessage.warning(t("dashboard.loadOverviewMetricFailed"));
   } finally {
     loadingFeature.value = false;
   }
@@ -418,16 +424,16 @@ const formatRelativeTime = (value: string) => {
   if (!ts) return "-";
 
   const diffSec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-  if (diffSec < 60) return `${diffSec}s 前`;
+  if (diffSec < 60) return t("dashboard.secondsAgo", { value: diffSec });
 
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m 前`;
+  if (diffMin < 60) return t("dashboard.minutesAgo", { value: diffMin });
 
   const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour}h 前`;
+  if (diffHour < 24) return t("dashboard.hoursAgo", { value: diffHour });
 
   const diffDay = Math.floor(diffHour / 24);
-  return `${diffDay}d 前`;
+  return t("dashboard.daysAgo", { value: diffDay });
 };
 
 const formatMetricValue = (value: number | null | undefined) => {
@@ -447,8 +453,8 @@ const formatMetricValue = (value: number | null | undefined) => {
 
 const formatPulseXLabel = (point: MetricSeriesPoint | undefined) => {
   if (!point) return "-";
-  if (point.step !== null && point.step !== undefined) return `step ${point.step}`;
-  if (point.epoch !== null && point.epoch !== undefined) return `epoch ${point.epoch}`;
+  if (point.step !== null && point.step !== undefined) return t("dashboard.step", { value: point.step });
+  if (point.epoch !== null && point.epoch !== undefined) return t("dashboard.epoch", { value: point.epoch });
   return formatDate(point.event_time);
 };
 

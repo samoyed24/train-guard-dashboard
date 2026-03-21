@@ -4,95 +4,95 @@
       <div class="panel-head">
         <div>
           <p class="panel-kicker">Config Center</p>
-          <h3>配置中心</h3>
-          <p class="panel-desc">按应用管理配置版本，并一键发布激活版本供 Agent 拉取。</p>
+          <h3>{{ t("configs.title") }}</h3>
+          <p class="panel-desc">{{ t("configs.desc") }}</p>
         </div>
       </div>
 
       <div class="panel-meta">
-        <span class="info-chip" v-if="selectedApp">当前应用：{{ selectedApp.name }}</span>
-        <span class="info-chip">版本数：{{ configs.length }}</span>
-        <span class="info-chip">激活版本：{{ activeConfigVersionLabel }}</span>
+        <span class="info-chip" v-if="selectedApp">{{ t("configs.currentApp", { name: selectedApp.name }) }}</span>
+        <span class="info-chip">{{ t("configs.versionCount", { count: configs.length }) }}</span>
+        <span class="info-chip">{{ t("configs.activeVersion", { version: activeConfigVersionLabel }) }}</span>
       </div>
 
-      <el-select v-model="selectedAppId" placeholder="选择应用" class="app-select" @change="onChangeApp">
+      <el-select v-model="selectedAppId" :placeholder="t('configs.selectApp')" class="app-select" @change="onChangeApp">
         <el-option v-for="item in apps" :key="item.id" :label="item.name + ' (' + item.app_id + ')'" :value="item.id" />
       </el-select>
 
       <div class="editor-wrap">
-        <p class="panel-desc">新增配置版本（表单）</p>
+        <p class="panel-desc">{{ t("configs.addVersion") }}</p>
         <el-form :model="configForm" label-width="112px" class="config-form">
           <div class="config-grid">
             <section class="config-block">
-              <p class="config-block-title">Server</p>
-              <el-form-item label="上报地址">
+              <p class="config-block-title">{{ t("configs.server") }}</p>
+              <el-form-item :label="t('configs.reportUrl')">
                 <el-input
                   v-model="configForm.serverUrl"
-                  placeholder="http://localhost:8000/api/metrics/ingest?app_id=...&app_secret=..."
+                  :placeholder="t('configs.templateUrl')"
                 />
               </el-form-item>
-              <el-form-item label="超时(秒)">
+              <el-form-item :label="t('configs.timeout')">
                 <el-input-number v-model="configForm.timeout" :min="1" :max="120" :step="1" />
               </el-form-item>
-              <el-form-item label="重试次数">
+              <el-form-item :label="t('configs.retryCount')">
                 <el-input-number v-model="configForm.retryCount" :min="0" :max="10" :step="1" />
               </el-form-item>
             </section>
 
             <section class="config-block">
-              <p class="config-block-title">Agent</p>
-              <el-form-item label="上传频率">
+              <p class="config-block-title">{{ t("configs.agent") }}</p>
+              <el-form-item :label="t('configs.uploadFrequency')">
                 <el-select
                   v-model="configForm.uploadFrequency"
                   filterable
                   allow-create
                   default-first-option
-                  placeholder="请选择或输入"
+                  :placeholder="t('configs.selectOrInput')"
                 >
-                  <el-option label="按 Epoch" value="epoch" />
-                  <el-option label="按 Step" value="step" />
-                  <el-option label="按时间" value="time" />
+                  <el-option :label="t('configs.byEpoch')" value="epoch" />
+                  <el-option :label="t('configs.byStep')" value="step" />
+                  <el-option :label="t('configs.byTime')" value="time" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="上传间隔">
+              <el-form-item :label="t('configs.uploadInterval')">
                 <el-input-number v-model="configForm.uploadInterval" :min="1" :max="100000" :step="1" />
               </el-form-item>
-              <el-form-item label="异步上报">
+              <el-form-item :label="t('configs.asyncReport')">
                 <el-switch v-model="configForm.enableAsync" />
               </el-form-item>
             </section>
 
             <section class="config-block config-block--full">
-              <p class="config-block-title">Metrics</p>
-              <el-form-item label="包含系统信息">
+              <p class="config-block-title">{{ t("configs.metrics") }}</p>
+              <el-form-item :label="t('configs.includeSystemInfo')">
                 <el-switch v-model="configForm.includeSystemInfo" />
               </el-form-item>
             </section>
           </div>
         </el-form>
         <div class="action-row">
-          <el-button type="primary" @click="saveVersion">保存版本</el-button>
-          <el-button @click="fillTemplate">重置模板</el-button>
-          <el-button :disabled="!configs.length" @click="refillFromCurrentVersion">回填当前版本</el-button>
+          <el-button type="primary" @click="saveVersion">{{ t("configs.saveVersion") }}</el-button>
+          <el-button @click="fillTemplate">{{ t("configs.resetTemplate") }}</el-button>
+          <el-button :disabled="!configs.length" @click="refillFromCurrentVersion">{{ t("configs.refillCurrent") }}</el-button>
         </div>
       </div>
     </section>
 
     <section class="card">
-      <h3>版本列表</h3>
-      <el-table class="data-table" :data="configs" border empty-text="暂无配置版本，请先保存一版配置">
-        <el-table-column prop="version" label="版本" width="90" />
-        <el-table-column prop="is_active" label="激活" width="90">
+      <h3>{{ t("configs.versionList") }}</h3>
+      <el-table class="data-table" :data="configs" border :empty-text="t('configs.noVersion')">
+        <el-table-column prop="version" :label="t('configs.version')" width="90" />
+        <el-table-column prop="is_active" :label="t('configs.active')" width="90">
           <template #default="scope">
-            <span>{{ scope.row.is_active ? "是" : "否" }}</span>
+            <span>{{ scope.row.is_active ? t("common.yes") : t("common.no") }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" min-width="180">
+        <el-table-column prop="created_at" :label="t('apps.createdAt')" min-width="180">
           <template #default="scope">{{ formatDate(scope.row.created_at) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="120">
+        <el-table-column :label="t('configs.actions')" width="120">
           <template #default="scope">
-            <el-button size="small" type="success" @click="publish(scope.row.id)">发布</el-button>
+            <el-button size="small" type="success" @click="publish(scope.row.id)">{{ t("configs.publish") }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -103,6 +103,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
+import { useI18n } from "vue-i18n";
 import http from "../api/http";
 
 interface AppItem {
@@ -146,6 +147,7 @@ interface ConfigPayload {
 }
 
 const apps = ref<AppItem[]>([]);
+const { t } = useI18n();
 const selectedAppId = ref<number | null>(null);
 const configs = ref<ConfigVersion[]>([]);
 const configForm = reactive<ConfigFormModel>(createTemplateForm());
@@ -162,7 +164,7 @@ const formatDate = (value: string) => {
 
 function createTemplateForm(): ConfigFormModel {
   return {
-    serverUrl: "http://localhost:8000/api/metrics/ingest?app_id=YOUR_APP_ID&app_secret=YOUR_APP_SECRET",
+    serverUrl: t("configs.templateUrl"),
     timeout: 10,
     retryCount: 3,
     uploadFrequency: "epoch",
@@ -236,7 +238,7 @@ const refillFromCurrentVersion = () => {
   syncFormFromCurrentConfigs();
   const current = configs.value.find((item) => item.is_active) ?? configs.value[0];
   if (current) {
-    ElMessage.success(`已回填 v${current.version}`);
+    ElMessage.success(t("configs.refilledVersion", { version: current.version }));
   }
 };
 
@@ -295,23 +297,23 @@ const onChangeApp = async () => {
 
 const saveVersion = async () => {
   if (!selectedAppId.value) {
-    ElMessage.warning("请先选择应用");
+    ElMessage.warning(t("configs.selectAppFirst"));
     return;
   }
 
   const url = configForm.serverUrl.trim();
   if (!url) {
-    ElMessage.warning("请填写上报地址");
+    ElMessage.warning(t("configs.inputReportUrl"));
     return;
   }
 
   try {
     const content = buildPayload();
     await http.post(`/api/apps/${selectedAppId.value}/configs`, { content });
-    ElMessage.success("版本已保存");
+    ElMessage.success(t("configs.versionSaved"));
     await loadConfigs();
   } catch (e: any) {
-    ElMessage.error(e?.response?.data?.message || "保存失败");
+    ElMessage.error(e?.response?.data?.message || t("configs.saveFailed"));
   }
 };
 
@@ -319,10 +321,10 @@ const publish = async (id: number) => {
   if (!selectedAppId.value) return;
   try {
     await http.post(`/api/apps/${selectedAppId.value}/configs/${id}/publish`);
-    ElMessage.success("已发布");
+    ElMessage.success(t("configs.published"));
     await loadConfigs();
   } catch {
-    ElMessage.error("发布失败");
+    ElMessage.error(t("configs.publishFailed"));
   }
 };
 
