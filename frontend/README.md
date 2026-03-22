@@ -78,10 +78,10 @@ VITE_API_BASE_URL=http://localhost:8000
 - `GET /api/projects/:projectId/runs`
 - `GET /api/projects/:projectId/runs/:runId/metrics`
 - `GET /api/projects/:projectId/runs/:runId/metrics/series`
-- `POST /api/agent/config/fetch`
+- `GET /api/agent/config`
 - `POST /api/metrics/ingest`
 
-配置中心会生成 Agent 用的获取配置地址；请求该地址以及指标上报接口时，需要额外携带 AK/SK 和 `project_id`。
+配置中心会生成 Agent 用的获取配置地址；请求该地址以及指标上报接口时，需要在 Header 中携带 `X-Access-Key-Id`、`X-Secret-Key` 和 `X-Project-Id`。
 
 ## GitHub Pages 自动部署
 

@@ -77,13 +77,13 @@ class ProjectAccessKeyAndAgentIntegrationTestCase(BackendTestCase):
             "X-Project-Id": project_id,
         }
 
-        fetch_config = self.client.post("/api/agent/config/fetch", headers=access_headers, json={"project_id": project_id})
+        fetch_config = self.client.get("/api/agent/config", headers=access_headers)
         self.assertEqual(fetch_config.status_code, 200)
         fetched = fetch_config.json["data"]["config"]
         self.assertEqual(fetched["server"]["heartbeat_interval_seconds"], 12)
         self.assertEqual(
             fetched["server"]["url"],
-            f"https://api.example.test/api/metrics/ingest?project_id={project_id}",
+            "https://api.example.test/api/metrics/ingest",
         )
 
         ingest = self.client.post(
@@ -157,4 +157,3 @@ class ProjectAccessKeyAndAgentIntegrationTestCase(BackendTestCase):
         self.assertEqual(payload["featured"]["run"]["id"], run_id)
         self.assertEqual(payload["featured"]["selected_metric"], "loss")
         self.assertEqual(payload["featured"]["points"][0]["value"], 0.42)
-

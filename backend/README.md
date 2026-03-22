@@ -9,7 +9,7 @@
 - 用户注册/登录/JWT 鉴权
 - 应用管理（生成 app_id/app_secret）
 - Web 配置中心（配置版本、发布激活）
-- 配置分发（`/api/agent/config/fetch`）
+- 配置分发（`/api/agent/config`）
 - 训练指标上报（`/api/metrics/ingest`，写入 Kafka）
 - 指标查询（按 app/run）
 - 指标时序点存储与按指标曲线查询
@@ -86,7 +86,7 @@ uv sync
 - `GET /api/projects/:projectId/config`
 - `PUT /api/projects/:projectId/config`
 - `GET /api/dashboard/overview`
-- `POST /api/agent/config/fetch`（Agent 用）
+- `GET /api/agent/config`（Agent 用）
 - `POST /api/metrics/ingest`（Agent 用）
 - `GET /api/projects/:projectId/runs/:runId/metrics/series`
 
@@ -114,9 +114,9 @@ uv sync
 
 配置拉取支持：
 - Header: `X-Access-Key-Id` / `X-Secret-Key` / `X-Project-Id`
-- Body: `access_key_id` / `secret_key` / `project_id`
+- Method: `GET /api/agent/config`
 
 数据上报鉴权支持：
-- Header 或 Query 携带 `access_key_id` / `secret_key` / `project_id`
-- 方便将 `server.url` 配置成：
-  - `http://localhost:8000/api/metrics/ingest?project_id=...`
+- Header 携带 `X-Access-Key-Id` / `X-Secret-Key` / `X-Project-Id`
+- `server.url` 由后端注入为：
+  - `http://localhost:8000/api/metrics/ingest`

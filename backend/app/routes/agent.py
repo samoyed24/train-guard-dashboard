@@ -1,6 +1,5 @@
 from copy import deepcopy
 from datetime import datetime, timezone
-from urllib.parse import urlencode
 
 from flask import Blueprint, current_app, g, jsonify, request
 
@@ -14,11 +13,7 @@ agent_bp = Blueprint("agent", __name__, url_prefix="/api")
 
 
 def _resolve_project():
-    project_id = (
-        request.headers.get("X-Project-Id")
-        or request.args.get("project_id")
-        or (request.get_json(silent=True) or {}).get("project_id")
-    )
+    project_id = request.headers.get("X-Project-Id")
     project_id = (project_id or "").strip()
     if not project_id:
         return None
@@ -39,8 +34,7 @@ def _build_public_api_base_url() -> str:
 
 def _build_ingest_url(project: Application) -> str:
     base_url = _build_public_api_base_url()
-    query = urlencode({"project_id": project.app_id})
-    return f"{base_url}/api/metrics/ingest?{query}"
+    return f"{base_url}/api/metrics/ingest"
 
 
 def _hydrate_config(content: dict, project: Application) -> dict:
@@ -50,7 +44,7 @@ def _hydrate_config(content: dict, project: Application) -> dict:
     return hydrated
 
 
-@agent_bp.post("/agent/config/fetch")
+@agent_bp.get("/agent/config")
 @access_key_auth_required
 def fetch_config():
     project = _resolve_project()

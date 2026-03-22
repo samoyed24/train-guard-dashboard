@@ -29,11 +29,7 @@ X-Secret-Key: <secret_key>
 X-Project-Id: <project_id>
 ```
 
-Equivalent query/body fields are also accepted where applicable:
-
-- `access_key_id`
-- `secret_key`
-- `project_id`
+For agent APIs in this document, these credentials are expected in request headers.
 
 ## Common Response Style
 
@@ -765,7 +761,7 @@ Possible errors:
 
 These endpoints are intended for agents or SDKs, not the dashboard UI.
 
-### POST `/api/agent/config/fetch`
+### GET `/api/agent/config`
 
 Fetch the active config for a project using access key credentials.
 
@@ -775,14 +771,13 @@ Auth:
 - `X-Secret-Key`
 - `X-Project-Id`
 
-Minimal request body:
+Example request:
 
-```json
-{
-  "project_id": "project_abcd1234",
-  "access_key_id": "ak_xxxxx",
-  "secret_key": "sk_xxxxx"
-}
+```http
+GET /api/agent/config HTTP/1.1
+X-Access-Key-Id: ak_xxxxx
+X-Secret-Key: sk_xxxxx
+X-Project-Id: project_abcd1234
 ```
 
 Response `200`:
@@ -796,7 +791,7 @@ Response `200`:
         "heartbeat_interval_seconds": 15,
         "timeout": 10,
         "retry_count": 3,
-        "url": "http://localhost:8000/api/metrics/ingest?project_id=project_abcd1234"
+        "url": "http://localhost:8000/api/metrics/ingest"
       },
       "agent": {
         "upload_frequency": "epoch",
@@ -827,9 +822,6 @@ Request body example:
 
 ```json
 {
-  "project_id": "project_abcd1234",
-  "access_key_id": "ak_xxxxx",
-  "secret_key": "sk_xxxxx",
   "train_id": "run-001",
   "epoch": 1,
   "step": 10,
@@ -866,5 +858,6 @@ Possible errors:
 
 - Project ownership checks are enforced server-side for all dashboard APIs.
 - Agent APIs do not expose `project_secret`; they rely on user-owned Access Keys.
+- Agent authentication and project routing are header-based: `X-Access-Key-Id`, `X-Secret-Key`, `X-Project-Id`.
 - `server.url` in fetched config is generated automatically from `PUBLIC_API_BASE_URL` when configured, otherwise from the current request host.
 - Historical versioned config APIs still exist, but the current frontend now primarily uses the single-config endpoints.

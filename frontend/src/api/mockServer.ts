@@ -1310,7 +1310,7 @@ export async function handleMockRequest(request: MockRequest): Promise<MockRespo
     });
   }
 
-  if (method === "POST" && path === "/api/agent/config/fetch") {
+  if (method === "GET" && path === "/api/agent/config") {
     const accessKeyAuth = requireAccessKeyAuth(request, url.searchParams);
     if (!accessKeyAuth.ok) return accessKeyAuth.response;
 
@@ -1483,17 +1483,8 @@ function requireAuth(request: MockRequest): AuthResult {
 }
 
 function requireAccessKeyAuth(request: MockRequest, query: URLSearchParams): AccessKeyAuthResult {
-  const body = asObject(request.body);
-
-  const accessKeyId =
-    asString(request.headers["x-access-key-id"]).trim() ||
-    asString(query.get("access_key_id") ?? "").trim() ||
-    asString(body?.access_key_id).trim();
-
-  const secretKey =
-    asString(request.headers["x-secret-key"]).trim() ||
-    asString(query.get("secret_key") ?? "").trim() ||
-    asString(body?.secret_key).trim();
+  const accessKeyId = asString(request.headers["x-access-key-id"]).trim();
+  const secretKey = asString(request.headers["x-secret-key"]).trim();
 
   if (!accessKeyId || !secretKey) {
     return { ok: false, response: fail(401, "Invalid access key credentials") };
@@ -1520,11 +1511,7 @@ function findOwnedProject(appPk: number, userId: number): MockApp | undefined {
 }
 
 function findProjectForAccessKey(request: MockRequest, query: URLSearchParams, userId: number): MockApp | undefined {
-  const body = asObject(request.body);
-  const projectId =
-    asString(request.headers["x-project-id"]).trim() ||
-    asString(query.get("project_id") ?? "").trim() ||
-    asString(body?.project_id).trim();
+  const projectId = asString(request.headers["x-project-id"]).trim();
 
   if (!projectId) {
     return undefined;
@@ -1644,9 +1631,7 @@ function hydrateProjectConfig(content: unknown, request: MockRequest, project: M
   const hydrated = clone(content);
   const root = asObject(hydrated) ?? {};
   const server = asObject(root.server) ?? {};
-  const reportUrl = new URL("/api/metrics/ingest", request.url);
-  reportUrl.searchParams.set("project_id", project.app_id);
-  server.url = reportUrl.toString();
+  server.url = new URL("/api/metrics/ingest", request.url).toString();
   root.server = server;
   return root;
 }

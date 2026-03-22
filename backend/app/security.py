@@ -88,12 +88,8 @@ def validate_project_credentials(project_id: str, project_secret: str):
 def project_auth_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        project_id = request.headers.get("X-Project-Id") or request.args.get("project_id")
-        project_secret = request.headers.get("X-Project-Secret") or request.args.get("project_secret")
-
-        body = request.get_json(silent=True) or {}
-        project_id = project_id or body.get("project_id")
-        project_secret = project_secret or body.get("project_secret")
+        project_id = request.headers.get("X-Project-Id")
+        project_secret = request.headers.get("X-Project-Secret")
 
         app = validate_project_credentials(project_id, project_secret)
         if not app:
@@ -122,12 +118,8 @@ def validate_access_key_credentials(access_key_id: str, secret_key: str):
 def access_key_auth_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        access_key_id = request.headers.get("X-Access-Key-Id") or request.args.get("access_key_id")
-        secret_key = request.headers.get("X-Secret-Key") or request.args.get("secret_key")
-
-        body = request.get_json(silent=True) or {}
-        access_key_id = access_key_id or body.get("access_key_id")
-        secret_key = secret_key or body.get("secret_key")
+        access_key_id = request.headers.get("X-Access-Key-Id")
+        secret_key = request.headers.get("X-Secret-Key")
 
         access_key = validate_access_key_credentials(access_key_id, secret_key)
         if not access_key:

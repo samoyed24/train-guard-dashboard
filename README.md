@@ -90,9 +90,9 @@ VITE_API_BASE_URL=http://localhost:8000
 - `GET /api/projects/:projectId/runs/:runId/metrics`
 - `GET /api/projects/:projectId/runs/:runId/metrics/series`
 
-Agent 侧（project_id/project_secret 鉴权）：
+Agent 侧（AK/SK + Project Header 鉴权）：
 
-- `POST /api/agent/config/fetch`
+- `GET /api/agent/config`
 - `POST /api/metrics/ingest`
 
 指标上报链路说明：
@@ -102,15 +102,15 @@ Agent 侧（project_id/project_secret 鉴权）：
 
 ## Agent 接入约定
 
-1. 在 Web 管理台创建项目，拿到 `project_id/project_secret`
+1. 在 Web 管理台创建项目，拿到 `project_id`
 2. 在配置中心发布一个有效配置
 3. Agent 拉取配置：
-   - URL: `/api/agent/config/fetch`
+   - URL: `/api/agent/config`
    - Header: `X-Access-Key-Id`, `X-Secret-Key`, `X-Project-Id`
-   - Body: `{ "access_key_id": "...", "secret_key": "...", "project_id": "..." }`
+   - Method: `GET`
 4. Agent 上报数据到 `server.url`
-   - `server.url` 会在拉配置时由后端自动注入为 `/api/metrics/ingest?project_id=...`
-   - 请求 `/api/metrics/ingest` 时同样携带 `X-Access-Key-Id` / `X-Secret-Key`
+   - `server.url` 会在拉配置时由后端自动注入为 `/api/metrics/ingest`
+   - 请求 `/api/metrics/ingest` 时同样携带 `X-Access-Key-Id` / `X-Secret-Key` / `X-Project-Id`
 
 ## dev 分支自动部署（镜像构建 + 开发服务器部署）
 

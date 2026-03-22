@@ -127,13 +127,8 @@ const configs = ref<ConfigVersion[]>([]);
 const configForm = reactive<ConfigFormModel>(createTemplateForm());
 const selectedProject = computed(() => projects.value.find((item) => item.id === selectedProjectId.value) || null);
 const apiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
-const configFetchUrl = computed(() => `${apiBaseUrl}/api/agent/config/fetch`);
-const reportEndpoint = computed(() => {
-  if (!selectedProject.value) {
-    return `${apiBaseUrl}/api/metrics/ingest`;
-  }
-  return `${apiBaseUrl}/api/metrics/ingest?project_id=${selectedProject.value.project_id}`;
-});
+const configFetchUrl = computed(() => `${apiBaseUrl}/api/agent/config`);
+const reportEndpoint = computed(() => `${apiBaseUrl}/api/metrics/ingest`);
 const uploadIntervalUnitLabel = computed(() => {
   if (configForm.uploadFrequency === "epoch") return t("configs.intervalEpochUnit");
   if (configForm.uploadFrequency === "step") return t("configs.intervalStepUnit");
