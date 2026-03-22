@@ -3,10 +3,11 @@ package consumer
 import (
 	"context"
 	"errors"
-	"io"
 	"log"
+	"strings"
+	"time"
 
-	"github.com/segmentio/kafka-go"
+	redis "github.com/redis/go-redis/v9"
 
 	"train-guard-worker/internal/config"
 	"train-guard-worker/internal/metrics"
@@ -14,65 +15,110 @@ import (
 )
 
 type Consumer struct {
-	reader       *kafka.Reader
+	client       *redis.Client
+	streamKey    string
+	group        string
+	consumer     string
+	readBlock    time.Duration
 	store        *store.Store
-	autoCommit   bool
 }
 
-func New(cfg config.Config, store *store.Store) *Consumer {
-	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  cfg.KafkaBrokers,
-		GroupID:  cfg.KafkaGroupID,
-		Topic:    cfg.KafkaTopic,
-		MinBytes: cfg.KafkaMinBytes,
-		MaxBytes: cfg.KafkaMaxBytes,
-		MaxWait:  cfg.KafkaMaxWait,
-	})
-
-	return &Consumer{
-		reader:     reader,
-		store:      store,
-		autoCommit: cfg.KafkaCommitEnabled,
+func New(cfg config.Config, store *store.Store) (*Consumer, error) {
+	opts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		return nil, err
 	}
+
+	client := redis.NewClient(opts)
+	consumer := &Consumer{
+		client:    client,
+		streamKey: cfg.MetricsStreamKey,
+		group:     cfg.MetricsConsumerGroup,
+		consumer:  cfg.MetricsConsumerName,
+		readBlock: cfg.MetricsReadBlock,
+		store:     store,
+	}
+
+	if err := consumer.ensureGroup(context.Background()); err != nil {
+		client.Close()
+		return nil, err
+	}
+
+	return consumer, nil
 }
 
 func (c *Consumer) Run(ctx context.Context) error {
-	defer c.reader.Close()
+	defer c.client.Close()
 
 	for {
-		msg, err := c.reader.FetchMessage(ctx)
+		result, err := c.client.XReadGroup(ctx, &redis.XReadGroupArgs{
+			Group:    c.group,
+			Consumer: c.consumer,
+			Streams:  []string{c.streamKey, ">"},
+			Count:    1,
+			Block:    c.readBlock,
+		}).Result()
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				return ctx.Err()
 			}
-			if errors.Is(err, io.EOF) {
-				return nil
+			if errors.Is(err, redis.Nil) {
+				continue
+			}
+			if strings.Contains(err.Error(), "NOGROUP") {
+				if ensureErr := c.ensureGroup(ctx); ensureErr != nil {
+					return ensureErr
+				}
+				continue
 			}
 			return err
 		}
 
-		if err := c.handleMessage(ctx, msg); err != nil {
-			log.Printf("process kafka message failed: topic=%s partition=%d offset=%d err=%v", msg.Topic, msg.Partition, msg.Offset, err)
-			continue
-		}
+		for _, stream := range result {
+			for _, message := range stream.Messages {
+				if err := c.handleMessage(ctx, message); err != nil {
+					log.Printf("process redis stream message failed: stream=%s id=%s err=%v", c.streamKey, message.ID, err)
+					continue
+				}
 
-		if c.autoCommit {
-			if err := c.reader.CommitMessages(ctx, msg); err != nil {
-				return err
+				if err := c.client.XAck(ctx, c.streamKey, c.group, message.ID).Err(); err != nil {
+					return err
+				}
+				if err := c.client.XDel(ctx, c.streamKey, message.ID).Err(); err != nil {
+					return err
+				}
 			}
 		}
 	}
 }
 
-func (c *Consumer) handleMessage(ctx context.Context, msg kafka.Message) error {
-	event, err := metrics.DecodeEvent(msg.Value)
+func (c *Consumer) ensureGroup(ctx context.Context) error {
+	err := c.client.XGroupCreateMkStream(ctx, c.streamKey, c.group, "$").Err()
+	if err == nil || strings.Contains(err.Error(), "BUSYGROUP") {
+		return nil
+	}
+	return err
+}
+
+func (c *Consumer) handleMessage(ctx context.Context, msg redis.XMessage) error {
+	raw, ok := msg.Values["event"]
+	if !ok {
+		return errors.New("missing event payload")
+	}
+
+	rawEvent, ok := raw.(string)
+	if !ok {
+		return errors.New("event payload is not a string")
+	}
+
+	event, err := metrics.DecodeEvent([]byte(rawEvent))
 	if err != nil {
 		return err
 	}
 
 	points := metrics.ExtractPoints(event)
 	if len(points) == 0 {
-		log.Printf("skip kafka message without numeric metrics: topic=%s partition=%d offset=%d run_id=%d", msg.Topic, msg.Partition, msg.Offset, event.RunID)
+		log.Printf("skip redis stream message without numeric metrics: stream=%s id=%s run_id=%d", c.streamKey, msg.ID, event.RunID)
 		return nil
 	}
 
@@ -81,10 +127,9 @@ func (c *Consumer) handleMessage(ctx context.Context, msg kafka.Message) error {
 	}
 
 	log.Printf(
-		"inserted metric points: topic=%s partition=%d offset=%d run_id=%d record_id=%d points=%d",
-		msg.Topic,
-		msg.Partition,
-		msg.Offset,
+		"inserted metric points: stream=%s id=%s run_id=%d record_id=%d points=%d",
+		c.streamKey,
+		msg.ID,
 		event.RunID,
 		event.RecordID,
 		len(points),

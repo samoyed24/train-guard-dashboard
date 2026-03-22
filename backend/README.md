@@ -1,6 +1,6 @@
 # Train Guard Dashboard Backend
 
-技术栈：Flask + PostgreSQL + Redis + Kafka
+技术栈：Flask + PostgreSQL + Redis
 
 依赖管理：uv（`pyproject.toml`）
 
@@ -10,7 +10,7 @@
 - 应用管理（生成 app_id/app_secret）
 - Web 配置中心（配置版本、发布激活）
 - 配置分发（`/api/agent/config`）
-- 训练指标上报（`/api/metrics/ingest`，写入 Kafka）
+- 训练指标上报（`/api/metrics/ingest`，写入 Redis Stream）
 - 指标查询（按 app/run）
 - 指标时序点存储与按指标曲线查询
 
@@ -19,8 +19,8 @@
 - `POST /api/metrics/ingest` 接口会：
   - 校验应用凭证
   - 更新 `training_runs` / `metric_records`
-  - 将原始事件发布到 Kafka（默认 topic：`train-guard.metrics.ingest`）
-- 建议由独立消费者服务消费 Kafka 并写入时序表。
+  - 将原始事件发布到 Redis Stream（默认 stream：`train-guard.metrics.ingest`）
+- 建议由独立消费者服务消费 Redis Stream 并写入时序表。
 
 ## 启动
 
@@ -50,17 +50,12 @@ uv run python run.py
   - `SECRET_KEY`
   - `DATABASE_URL`
   - `REDIS_URL`
+  - `METRICS_STREAM_KEY`
   - `CORS_ORIGINS`
   - `JWT_EXPIRES_MINUTES`
   - `EMAIL_CODE_TTL_SECONDS`
   - `EMAIL_CODE_COOLDOWN_SECONDS`
   - `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_USE_TLS` / `SMTP_FROM_EMAIL`
-  - `KAFKA_BOOTSTRAP_SERVERS`
-  - `KAFKA_METRICS_TOPIC`
-  - `KAFKA_PRODUCER_ACKS`
-  - `KAFKA_PRODUCER_LINGER_MS`
-  - `KAFKA_PRODUCER_RETRIES`
-  - `KAFKA_SEND_TIMEOUT_SECONDS`
 
 ## 常用 uv 命令
 
@@ -99,10 +94,9 @@ uv sync
   "run_id": 12,
   "record_id": 1288,
   "queued": true,
-  "kafka": {
-    "topic": "train-guard.metrics.ingest",
-    "partition": 0,
-    "offset": 12345
+  "queue": {
+    "stream": "train-guard.metrics.ingest",
+    "id": "1711123200000-0"
   }
 }
 ```

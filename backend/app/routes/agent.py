@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, current_app, g, jsonify, request
 
 from ..extensions import db
-from ..kafka_client import publish_metric_ingest_event
+from ..metrics_queue import publish_metric_ingest_event
 from ..models import Application, ConfigVersion, MetricRecord, TrainingRun
 from ..redis_client import redis_cache
 from ..security import access_key_auth_required
@@ -121,6 +121,6 @@ def ingest_metrics():
             "run_id": run.id,
             "record_id": record.id,
             "queued": True,
-            "kafka": delivery,
+            "queue": delivery,
         }
     ), 202

@@ -133,14 +133,10 @@ jobs:
           PUBLIC_API_BASE_URL=${{ secrets.DEV_PUBLIC_API_BASE_URL }}
           POSTGRES_IMAGE=${{ secrets.DEV_POSTGRES_IMAGE }}
           REDIS_IMAGE=${{ secrets.DEV_REDIS_IMAGE }}
-          KAFKA_IMAGE=${{ secrets.DEV_KAFKA_IMAGE || 'bitnami/kafka:3.7' }}
-          KAFKA_BOOTSTRAP_SERVERS=${{ secrets.DEV_KAFKA_BOOTSTRAP_SERVERS || 'kafka:9092' }}
-          KAFKA_METRICS_TOPIC=${{ secrets.DEV_KAFKA_METRICS_TOPIC || 'train-guard.metrics.ingest' }}
-          KAFKA_CONSUMER_GROUP_ID=${{ secrets.DEV_KAFKA_CONSUMER_GROUP_ID || 'train-guard-worker' }}
-          KAFKA_CONSUMER_MIN_BYTES=${{ secrets.DEV_KAFKA_CONSUMER_MIN_BYTES || '1000' }}
-          KAFKA_CONSUMER_MAX_BYTES=${{ secrets.DEV_KAFKA_CONSUMER_MAX_BYTES || '10000000' }}
-          KAFKA_CONSUMER_MAX_WAIT=${{ secrets.DEV_KAFKA_CONSUMER_MAX_WAIT || '1s' }}
-          KAFKA_CONSUMER_AUTO_COMMIT=${{ secrets.DEV_KAFKA_CONSUMER_AUTO_COMMIT || 'true' }}
+          METRICS_STREAM_KEY=${{ secrets.DEV_METRICS_STREAM_KEY || 'train-guard.metrics.ingest' }}
+          METRICS_CONSUMER_GROUP=${{ secrets.DEV_METRICS_CONSUMER_GROUP || 'train-guard-worker' }}
+          METRICS_CONSUMER_NAME=${{ secrets.DEV_METRICS_CONSUMER_NAME || 'train-guard-worker' }}
+          METRICS_READ_BLOCK=${{ secrets.DEV_METRICS_READ_BLOCK || '1s' }}
           FRONTEND_PORT=${{ secrets.DEV_FRONTEND_PORT }}
           BACKEND_PORT=${{ secrets.DEV_BACKEND_PORT }}
           SECRET_KEY=${{ secrets.DEV_SECRET_KEY }}
@@ -183,7 +179,7 @@ jobs:
             cd "${{ env.DEPLOY_PATH }}"
             echo "${{ secrets.DEV_ACR_PASSWORD }}" | docker login "${{ secrets.DEV_ACR_REGISTRY }}" -u "${{ secrets.DEV_ACR_USERNAME }}" --password-stdin
             docker compose --env-file .env -f docker-compose.dev.yml pull backend frontend worker
-            docker compose --env-file .env -f docker-compose.dev.yml up -d db redis kafka
+            docker compose --env-file .env -f docker-compose.dev.yml up -d db redis
             docker compose --env-file .env -f docker-compose.dev.yml up -d --remove-orphans backend
             for i in $(seq 1 10); do
               if docker compose --env-file .env -f docker-compose.dev.yml run --rm backend flask --app run.py init-db; then

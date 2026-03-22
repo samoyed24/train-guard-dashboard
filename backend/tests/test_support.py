@@ -134,7 +134,7 @@ class BackendTestCase(unittest.TestCase):
     def fake_publish_metric_ingest_event(self, event: dict, key: str | None = None):
         payload = {"event": event, "key": key}
         self.published_events.append(payload)
-        return {"topic": "train-guard.metrics.ingest", "partition": 0, "offset": len(self.published_events)}
+        return {"stream": "train-guard.metrics.ingest", "id": str(len(self.published_events))}
 
     def create_user(self, email: str = "alice@example.com", name: str = "Alice", password: str = "secret123"):
         with self.app.app_context():

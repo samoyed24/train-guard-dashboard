@@ -24,8 +24,12 @@ func main() {
 	}
 	defer db.Close()
 
-	kafkaConsumer := consumer.New(cfg, db)
-	if err := kafkaConsumer.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+	streamConsumer, err := consumer.New(cfg, db)
+	if err != nil {
+		log.Fatalf("create redis stream consumer failed: %v", err)
+	}
+
+	if err := streamConsumer.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
 		log.Fatalf("consumer stopped with error: %v", err)
 	}
 }
