@@ -39,6 +39,15 @@
       </div>
 
       <div class="editor-wrap">
+        <el-alert
+          v-if="selectedProject && !configs.length"
+          type="info"
+          show-icon
+          :closable="false"
+          :title="t('configs.noCurrentConfig')"
+          :description="t('configs.noCurrentConfigHint')"
+        />
+
         <el-form :model="configForm" label-width="136px" class="config-form">
           <div class="config-grid">
             <section class="config-block config-block--full">
