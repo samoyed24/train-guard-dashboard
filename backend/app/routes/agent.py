@@ -40,7 +40,9 @@ def _build_ingest_url(project: Application) -> str:
 def _hydrate_config(content: dict, project: Application) -> dict:
     hydrated = deepcopy(content)
     server = hydrated.setdefault("server", {})
-    server["url"] = _build_ingest_url(project)
+    configured_url = (server.get("url") or "").strip() if isinstance(server, dict) else ""
+    if not configured_url:
+        server["url"] = _build_ingest_url(project)
     return hydrated
 
 
