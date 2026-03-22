@@ -114,6 +114,14 @@ class ProjectAccessKeyAndAgentIntegrationTestCase(BackendTestCase):
         self.assertEqual(len(metrics.json), 1)
         self.assertEqual(metrics.json[0]["payload"]["loss"], 0.123)
 
+        cleared = self.client.delete(f"/api/projects/{project_pk}/config", headers=auth_headers)
+        self.assertEqual(cleared.status_code, 200)
+        self.assertEqual(cleared.json["message"], "cleared")
+
+        current_config = self.client.get(f"/api/projects/{project_pk}/config", headers=auth_headers)
+        self.assertEqual(current_config.status_code, 200)
+        self.assertIsNone(current_config.json)
+
     def test_dashboard_overview_returns_summary_recent_runs_and_featured_points(self) -> None:
         user = self.create_user()
         project = self.create_project_record(user.id, name="Vision Pipeline")

@@ -148,6 +148,19 @@ def upsert_current_config(app_pk: int):
     redis_cache.set_active_config(app.app_id, row.content, ttl_seconds=3600)
     return jsonify(_serialize_config(row))
 
+
+@apps_bp.delete("/<int:app_pk>/config")
+@auth_required
+def clear_current_config(app_pk: int):
+    app = Application.query.filter_by(id=app_pk, created_by=g.user.id).first_or_404()
+
+    ConfigVersion.query.filter_by(app_id=app.id).delete()
+    db.session.commit()
+
+    redis_cache.delete_active_config(app.app_id)
+    return jsonify({"message": "cleared"})
+
+
 @apps_bp.post("/<int:app_pk>/configs")
 @auth_required
 def create_config(app_pk: int):

@@ -83,6 +83,9 @@
         <div class="action-row">
           <el-button type="primary" @click="saveVersion">{{ t("configs.saveVersion") }}</el-button>
           <el-button @click="fillTemplate">{{ t("configs.resetTemplate") }}</el-button>
+          <el-button v-if="selectedProject && configs.length" type="danger" plain @click="clearConfig">
+            {{ t("configs.clearConfig") }}
+          </el-button>
         </div>
       </div>
     </section>
@@ -91,7 +94,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { useI18n } from "vue-i18n";
 import http from "../api/http";
 
@@ -284,6 +287,29 @@ const saveVersion = async () => {
     await loadConfigs();
   } catch (e: any) {
     ElMessage.error(e?.response?.data?.message || t("configs.saveFailed"));
+  }
+};
+
+const clearConfig = async () => {
+  if (!selectedProjectId.value || !configs.length) {
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm(t("configs.clearConfirmMessage"), t("configs.clearConfirmTitle"), {
+      type: "warning",
+    });
+  } catch {
+    return;
+  }
+
+  try {
+    await http.delete(`/api/projects/${selectedProjectId.value}/config`);
+    configs.value = [];
+    fillTemplate();
+    ElMessage.success(t("configs.configCleared"));
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || t("configs.clearFailed"));
   }
 };
 

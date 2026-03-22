@@ -1187,6 +1187,20 @@ export async function handleMockRequest(request: MockRequest): Promise<MockRespo
     });
   }
 
+  if (currentConfigMatch && method === "DELETE") {
+    const auth = requireAuth(request);
+    if (!auth.ok) return auth.response;
+
+    const appPk = Number(currentConfigMatch[1]);
+    const app = findOwnedProject(appPk, auth.user.id);
+    if (!app) return fail(404, "Not found");
+
+    state.configs = state.configs.filter((item) => item.app_pk !== app.id);
+    state.activeConfigCache.delete(app.app_id);
+
+    return ok({ message: "cleared" });
+  }
+
   const publishMatch = path.match(/^\/api\/projects\/(\d+)\/configs\/(\d+)\/publish$/);
   if (publishMatch && method === "POST") {
     const auth = requireAuth(request);
