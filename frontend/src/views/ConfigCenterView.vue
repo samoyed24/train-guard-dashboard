@@ -39,52 +39,37 @@
       </div>
 
       <div class="editor-wrap">
-        <el-tabs v-model="activeTab" class="config-tabs">
-          <el-tab-pane :label="t('configs.server')" name="server">
-            <el-form :model="configForm" label-width="136px" class="config-form">
-              <div class="config-grid">
-                <section class="config-block config-block--full">
-                  <p class="config-block-title">{{ t("configs.server") }}</p>
-                  <el-form-item :label="t('configs.reportUrl')">
-                    <el-input :model-value="reportEndpoint" readonly />
-                    <p class="field-hint">{{ t("configs.reportUrlHint") }}</p>
-                  </el-form-item>
-                  <el-form-item :label="t('configs.heartbeatInterval')">
-                    <el-input-number v-model="configForm.heartbeatInterval" :min="5" :max="60" :step="1" />
-                    <p class="field-hint">{{ t("configs.heartbeatHint") }}</p>
-                  </el-form-item>
-                  <el-form-item :label="t('configs.timeout')">
-                    <el-input-number v-model="configForm.timeout" :min="1" :max="120" :step="1" />
-                  </el-form-item>
-                  <el-form-item :label="t('configs.retryCount')">
-                    <el-input-number v-model="configForm.retryCount" :min="0" :max="10" :step="1" />
-                  </el-form-item>
-                </section>
-              </div>
-            </el-form>
-          </el-tab-pane>
-
-          <el-tab-pane :label="t('configs.agent')" name="agent">
-            <el-form :model="configForm" label-width="136px" class="config-form">
-              <div class="config-grid">
-                <section class="config-block config-block--full">
-                  <p class="config-block-title">{{ t("configs.agent") }}</p>
-                  <el-form-item :label="t('configs.uploadFrequency')">
-                    <el-select v-model="configForm.uploadFrequency">
-                      <el-option :label="t('configs.byEpoch')" value="epoch" />
-                      <el-option :label="t('configs.byStep')" value="step" />
-                      <el-option :label="t('configs.byTime')" value="time" />
-                    </el-select>
-                  </el-form-item>
-                  <el-form-item :label="t('configs.uploadInterval')">
-                    <el-input-number v-model="configForm.uploadInterval" :min="1" :max="100000" :step="1" />
-                    <p class="field-hint">{{ t("configs.uploadIntervalHint", { unit: uploadIntervalUnitLabel }) }}</p>
-                  </el-form-item>
-                </section>
-              </div>
-            </el-form>
-          </el-tab-pane>
-        </el-tabs>
+        <el-form :model="configForm" label-width="136px" class="config-form">
+          <div class="config-grid">
+            <section class="config-block config-block--full">
+              <el-form-item :label="t('configs.reportUrl')">
+                <el-input :model-value="reportEndpoint" readonly />
+                <p class="field-hint">{{ t("configs.reportUrlHint") }}</p>
+              </el-form-item>
+              <el-form-item :label="t('configs.heartbeatInterval')">
+                <el-input-number v-model="configForm.heartbeatInterval" :min="5" :max="60" :step="1" />
+                <p class="field-hint">{{ t("configs.heartbeatHint") }}</p>
+              </el-form-item>
+              <el-form-item :label="t('configs.timeout')">
+                <el-input-number v-model="configForm.timeout" :min="1" :max="120" :step="1" />
+              </el-form-item>
+              <el-form-item :label="t('configs.retryCount')">
+                <el-input-number v-model="configForm.retryCount" :min="0" :max="10" :step="1" />
+              </el-form-item>
+              <el-form-item :label="t('configs.uploadFrequency')">
+                <el-select v-model="configForm.uploadFrequency">
+                  <el-option :label="t('configs.byEpoch')" value="epoch" />
+                  <el-option :label="t('configs.byStep')" value="step" />
+                  <el-option :label="t('configs.byTime')" value="time" />
+                </el-select>
+              </el-form-item>
+              <el-form-item :label="t('configs.uploadInterval')">
+                <el-input-number v-model="configForm.uploadInterval" :min="1" :max="100000" :step="1" />
+                <p class="field-hint">{{ t("configs.uploadIntervalHint", { unit: uploadIntervalUnitLabel }) }}</p>
+              </el-form-item>
+            </section>
+          </div>
+        </el-form>
 
         <div class="action-row">
           <el-button type="primary" @click="saveVersion">{{ t("configs.saveVersion") }}</el-button>
@@ -139,7 +124,6 @@ const { t } = useI18n();
 const projects = ref<ProjectItem[]>([]);
 const selectedProjectId = ref<number | null>(null);
 const configs = ref<ConfigVersion[]>([]);
-const activeTab = ref("server");
 const configForm = reactive<ConfigFormModel>(createTemplateForm());
 const selectedProject = computed(() => projects.value.find((item) => item.id === selectedProjectId.value) || null);
 const apiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
