@@ -140,7 +140,9 @@ def upsert_current_config(app_pk: int):
         )
         db.session.add(row)
 
+    db.session.flush()
     ConfigVersion.query.filter(ConfigVersion.app_id == app.id, ConfigVersion.id != row.id).update({"is_active": False})
+    row.is_active = True
     db.session.commit()
 
     redis_set_json(f"config:active:{app.app_id}", row.content, ttl_seconds=3600)

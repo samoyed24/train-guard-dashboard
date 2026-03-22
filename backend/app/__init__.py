@@ -1,3 +1,5 @@
+from typing import Any
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 
@@ -12,9 +14,11 @@ from .routes.team import team_bp
 from .timeseries import enable_timeseries_hypertable
 
 
-def create_app() -> Flask:
+def create_app(config_overrides: dict[str, Any] | None = None) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(Config)
+    if config_overrides:
+        app.config.update(config_overrides)
 
     CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}})
     db.init_app(app)
