@@ -752,6 +752,15 @@ a {
   color: #9fb7d5;
 }
 
+:root[data-theme="dark"] .el-empty__image {
+  opacity: 0.72;
+  filter: brightness(0.72) saturate(0.82);
+}
+
+:root[data-theme="dark"] .el-empty__description {
+  color: #9fb7d5;
+}
+
 :root[data-theme="dark"] .dashboard-topbar {
   border-color: rgba(78, 114, 156, 0.5);
   background: rgba(16, 33, 53, 0.78);
