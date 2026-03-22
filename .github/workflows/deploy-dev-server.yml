@@ -4,96 +4,38 @@ on:
   push:
     branches:
       - dev
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - "worker/**"
-      - "docker-compose.dev.yml"
-      - "deploy/**"
-      - ".github/workflows/deploy-dev-server.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: deploy-dev-environment
+  cancel-in-progress: true
+
 jobs:
-  detect:
+  build_and_deploy:
     runs-on: ubuntu-latest
-    outputs:
-      build_backend: ${{ steps.scope.outputs.build_backend }}
-      build_frontend: ${{ steps.scope.outputs.build_frontend }}
-      build_worker: ${{ steps.scope.outputs.build_worker }}
-      deploy_backend: ${{ steps.scope.outputs.deploy_backend }}
-      deploy_frontend: ${{ steps.scope.outputs.deploy_frontend }}
-      deploy_worker: ${{ steps.scope.outputs.deploy_worker }}
+    env:
+      DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect changed areas
-        id: changes
-        if: github.event_name != 'workflow_dispatch'
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            backend:
-              - 'backend/**'
-            frontend:
-              - 'frontend/**'
-            worker:
-              - 'worker/**'
-            infra:
-              - 'docker-compose.dev.yml'
-              - 'deploy/**'
-              - '.github/workflows/deploy-dev-server.yml'
-
-      - name: Resolve deploy scope
-        id: scope
-        run: |
-          BUILD_BACKEND="${{ github.event_name == 'workflow_dispatch' && 'true' || steps.changes.outputs.backend }}"
-          BUILD_FRONTEND="${{ github.event_name == 'workflow_dispatch' && 'true' || steps.changes.outputs.frontend }}"
-          BUILD_WORKER="${{ github.event_name == 'workflow_dispatch' && 'true' || steps.changes.outputs.worker }}"
-          INFRA_CHANGED="${{ github.event_name == 'workflow_dispatch' && 'true' || steps.changes.outputs.infra }}"
-
-          DEPLOY_BACKEND="${BUILD_BACKEND}"
-          DEPLOY_FRONTEND="${BUILD_FRONTEND}"
-          DEPLOY_WORKER="${BUILD_WORKER}"
-
-          if [[ "${INFRA_CHANGED}" == "true" ]]; then
-            DEPLOY_BACKEND=true
-            DEPLOY_FRONTEND=true
-            DEPLOY_WORKER=true
-          fi
-
-          echo "build_backend=${BUILD_BACKEND}" >> "$GITHUB_OUTPUT"
-          echo "build_frontend=${BUILD_FRONTEND}" >> "$GITHUB_OUTPUT"
-          echo "build_worker=${BUILD_WORKER}" >> "$GITHUB_OUTPUT"
-          echo "deploy_backend=${DEPLOY_BACKEND}" >> "$GITHUB_OUTPUT"
-          echo "deploy_frontend=${DEPLOY_FRONTEND}" >> "$GITHUB_OUTPUT"
-          echo "deploy_worker=${DEPLOY_WORKER}" >> "$GITHUB_OUTPUT"
-
-  build_backend:
-    needs: detect
-    if: needs.detect.outputs.build_backend == 'true'
-    runs-on: ubuntu-latest
-    concurrency:
-      group: deploy-dev-backend-build
-      cancel-in-progress: true
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set image name
+      - name: Set image names
         env:
           DEV_ACR_REGISTRY: ${{ secrets.DEV_ACR_REGISTRY }}
           DEV_ACR_NAMESPACE: ${{ secrets.DEV_ACR_NAMESPACE }}
           DEV_BACKEND_REPOSITORY: ${{ secrets.DEV_BACKEND_REPOSITORY }}
+          DEV_FRONTEND_REPOSITORY: ${{ secrets.DEV_FRONTEND_REPOSITORY }}
+          DEV_WORKER_REPOSITORY: ${{ secrets.DEV_WORKER_REPOSITORY }}
         run: |
           REGISTRY="$(echo "${DEV_ACR_REGISTRY}" | tr -d '\r\n' | xargs)"
           NAMESPACE="$(echo "${DEV_ACR_NAMESPACE}" | tr -d '\r\n' | xargs)"
           BACKEND_REPO="$(echo "${DEV_BACKEND_REPOSITORY}" | tr -d '\r\n' | xargs)"
+          FRONTEND_REPO="$(echo "${DEV_FRONTEND_REPOSITORY}" | tr -d '\r\n' | xargs)"
+          WORKER_REPO="$(echo "${DEV_WORKER_REPOSITORY}" | tr -d '\r\n' | xargs)"
 
           REGISTRY="${REGISTRY#http://}"
           REGISTRY="${REGISTRY#https://}"
@@ -102,8 +44,14 @@ jobs:
           NAMESPACE="${NAMESPACE%/}"
           BACKEND_REPO="${BACKEND_REPO#/}"
           BACKEND_REPO="${BACKEND_REPO%/}"
+          FRONTEND_REPO="${FRONTEND_REPO#/}"
+          FRONTEND_REPO="${FRONTEND_REPO%/}"
+          WORKER_REPO="${WORKER_REPO#/}"
+          WORKER_REPO="${WORKER_REPO%/}"
 
           echo "BACKEND_IMAGE_REPO=${REGISTRY}/${NAMESPACE}/${BACKEND_REPO}" >> "$GITHUB_ENV"
+          echo "FRONTEND_IMAGE_REPO=${REGISTRY}/${NAMESPACE}/${FRONTEND_REPO}" >> "$GITHUB_ENV"
+          echo "WORKER_IMAGE_REPO=${REGISTRY}/${NAMESPACE}/${WORKER_REPO}" >> "$GITHUB_ENV"
           echo "IMAGE_TAG=${GITHUB_SHA}" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
@@ -126,49 +74,6 @@ jobs:
             ${{ env.BACKEND_IMAGE_REPO }}:dev
             ${{ env.BACKEND_IMAGE_REPO }}:${{ env.IMAGE_TAG }}
 
-  build_frontend:
-    needs: detect
-    if: needs.detect.outputs.build_frontend == 'true'
-    runs-on: ubuntu-latest
-    concurrency:
-      group: deploy-dev-frontend-build
-      cancel-in-progress: true
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set image name
-        env:
-          DEV_ACR_REGISTRY: ${{ secrets.DEV_ACR_REGISTRY }}
-          DEV_ACR_NAMESPACE: ${{ secrets.DEV_ACR_NAMESPACE }}
-          DEV_FRONTEND_REPOSITORY: ${{ secrets.DEV_FRONTEND_REPOSITORY }}
-        run: |
-          REGISTRY="$(echo "${DEV_ACR_REGISTRY}" | tr -d '\r\n' | xargs)"
-          NAMESPACE="$(echo "${DEV_ACR_NAMESPACE}" | tr -d '\r\n' | xargs)"
-          FRONTEND_REPO="$(echo "${DEV_FRONTEND_REPOSITORY}" | tr -d '\r\n' | xargs)"
-
-          REGISTRY="${REGISTRY#http://}"
-          REGISTRY="${REGISTRY#https://}"
-          REGISTRY="${REGISTRY%/}"
-          NAMESPACE="${NAMESPACE#/}"
-          NAMESPACE="${NAMESPACE%/}"
-          FRONTEND_REPO="${FRONTEND_REPO#/}"
-          FRONTEND_REPO="${FRONTEND_REPO%/}"
-
-          echo "FRONTEND_IMAGE_REPO=${REGISTRY}/${NAMESPACE}/${FRONTEND_REPO}" >> "$GITHUB_ENV"
-          echo "IMAGE_TAG=${GITHUB_SHA}" >> "$GITHUB_ENV"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Alibaba Cloud ACR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.DEV_ACR_REGISTRY }}
-          username: ${{ secrets.DEV_ACR_USERNAME }}
-          password: ${{ secrets.DEV_ACR_PASSWORD }}
-
       - name: Build and push frontend image (real API mode)
         uses: docker/build-push-action@v6
         with:
@@ -182,49 +87,6 @@ jobs:
             ${{ env.FRONTEND_IMAGE_REPO }}:dev
             ${{ env.FRONTEND_IMAGE_REPO }}:${{ env.IMAGE_TAG }}
 
-  build_worker:
-    needs: detect
-    if: needs.detect.outputs.build_worker == 'true'
-    runs-on: ubuntu-latest
-    concurrency:
-      group: deploy-dev-worker-build
-      cancel-in-progress: true
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set image name
-        env:
-          DEV_ACR_REGISTRY: ${{ secrets.DEV_ACR_REGISTRY }}
-          DEV_ACR_NAMESPACE: ${{ secrets.DEV_ACR_NAMESPACE }}
-          DEV_WORKER_REPOSITORY: ${{ secrets.DEV_WORKER_REPOSITORY }}
-        run: |
-          REGISTRY="$(echo "${DEV_ACR_REGISTRY}" | tr -d '\r\n' | xargs)"
-          NAMESPACE="$(echo "${DEV_ACR_NAMESPACE}" | tr -d '\r\n' | xargs)"
-          WORKER_REPO="$(echo "${DEV_WORKER_REPOSITORY}" | tr -d '\r\n' | xargs)"
-
-          REGISTRY="${REGISTRY#http://}"
-          REGISTRY="${REGISTRY#https://}"
-          REGISTRY="${REGISTRY%/}"
-          NAMESPACE="${NAMESPACE#/}"
-          NAMESPACE="${NAMESPACE%/}"
-          WORKER_REPO="${WORKER_REPO#/}"
-          WORKER_REPO="${WORKER_REPO%/}"
-
-          echo "WORKER_IMAGE_REPO=${REGISTRY}/${NAMESPACE}/${WORKER_REPO}" >> "$GITHUB_ENV"
-          echo "IMAGE_TAG=${GITHUB_SHA}" >> "$GITHUB_ENV"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Alibaba Cloud ACR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.DEV_ACR_REGISTRY }}
-          username: ${{ secrets.DEV_ACR_USERNAME }}
-          password: ${{ secrets.DEV_ACR_PASSWORD }}
-
       - name: Build and push worker image
         uses: docker/build-push-action@v6
         with:
@@ -234,23 +96,6 @@ jobs:
           tags: |
             ${{ env.WORKER_IMAGE_REPO }}:dev
             ${{ env.WORKER_IMAGE_REPO }}:${{ env.IMAGE_TAG }}
-
-  deploy_backend:
-    needs: [detect, build_backend]
-    if: |
-      always() &&
-      needs.detect.outputs.deploy_backend == 'true' &&
-      (needs.build_backend.result == 'success' || needs.build_backend.result == 'skipped')
-    runs-on: ubuntu-latest
-    concurrency:
-      group: deploy-dev-backend
-      cancel-in-progress: true
-    env:
-      DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Prepare deployment bundle
         env:
@@ -325,7 +170,7 @@ jobs:
           target: ${{ env.DEPLOY_PATH }}
           strip_components: 1
 
-      - name: Pull and restart backend on server
+      - name: Pull and restart dev environment on server
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEV_SERVER_HOST }}
@@ -336,7 +181,7 @@ jobs:
             set -euo pipefail
             cd "${{ env.DEPLOY_PATH }}"
             echo "${{ secrets.DEV_ACR_PASSWORD }}" | docker login "${{ secrets.DEV_ACR_REGISTRY }}" -u "${{ secrets.DEV_ACR_USERNAME }}" --password-stdin
-            docker compose --env-file .env -f docker-compose.dev.yml pull backend
+            docker compose --env-file .env -f docker-compose.dev.yml pull backend frontend worker
             docker compose --env-file .env -f docker-compose.dev.yml up -d db redis kafka
             docker compose --env-file .env -f docker-compose.dev.yml up -d --remove-orphans backend
             for i in $(seq 1 10); do
@@ -351,225 +196,4 @@ jobs:
               echo "init-db failed (attempt $i), retrying in 5s..."
               sleep 5
             done
-
-  deploy_frontend:
-    needs: [detect, build_frontend]
-    if: |
-      always() &&
-      needs.detect.outputs.deploy_frontend == 'true' &&
-      (needs.build_frontend.result == 'success' || needs.build_frontend.result == 'skipped')
-    runs-on: ubuntu-latest
-    concurrency:
-      group: deploy-dev-frontend
-      cancel-in-progress: true
-    env:
-      DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Prepare deployment bundle
-        env:
-          DEV_ACR_REGISTRY: ${{ secrets.DEV_ACR_REGISTRY }}
-          DEV_ACR_NAMESPACE: ${{ secrets.DEV_ACR_NAMESPACE }}
-          DEV_BACKEND_REPOSITORY: ${{ secrets.DEV_BACKEND_REPOSITORY }}
-          DEV_FRONTEND_REPOSITORY: ${{ secrets.DEV_FRONTEND_REPOSITORY }}
-          DEV_WORKER_REPOSITORY: ${{ secrets.DEV_WORKER_REPOSITORY }}
-        run: |
-          REGISTRY="$(echo "${DEV_ACR_REGISTRY}" | tr -d '\r\n' | xargs)"
-          NAMESPACE="$(echo "${DEV_ACR_NAMESPACE}" | tr -d '\r\n' | xargs)"
-          BACKEND_REPO="$(echo "${DEV_BACKEND_REPOSITORY}" | tr -d '\r\n' | xargs)"
-          FRONTEND_REPO="$(echo "${DEV_FRONTEND_REPOSITORY}" | tr -d '\r\n' | xargs)"
-          WORKER_REPO="$(echo "${DEV_WORKER_REPOSITORY}" | tr -d '\r\n' | xargs)"
-
-          REGISTRY="${REGISTRY#http://}"
-          REGISTRY="${REGISTRY#https://}"
-          REGISTRY="${REGISTRY%/}"
-          NAMESPACE="${NAMESPACE#/}"
-          NAMESPACE="${NAMESPACE%/}"
-          BACKEND_REPO="${BACKEND_REPO#/}"
-          BACKEND_REPO="${BACKEND_REPO%/}"
-          FRONTEND_REPO="${FRONTEND_REPO#/}"
-          FRONTEND_REPO="${FRONTEND_REPO%/}"
-          WORKER_REPO="${WORKER_REPO#/}"
-          WORKER_REPO="${WORKER_REPO%/}"
-
-          mkdir -p .deploy-bundle
-          cp docker-compose.dev.yml .deploy-bundle/docker-compose.dev.yml
-
-          cat > .deploy-bundle/.env <<ENVFILE
-          BACKEND_IMAGE=${REGISTRY}/${NAMESPACE}/${BACKEND_REPO}:dev
-          FRONTEND_IMAGE=${REGISTRY}/${NAMESPACE}/${FRONTEND_REPO}:dev
-          WORKER_IMAGE=${REGISTRY}/${NAMESPACE}/${WORKER_REPO}:dev
-          POSTGRES_IMAGE=${{ secrets.DEV_POSTGRES_IMAGE }}
-          REDIS_IMAGE=${{ secrets.DEV_REDIS_IMAGE }}
-          KAFKA_IMAGE=${{ secrets.DEV_KAFKA_IMAGE || 'bitnami/kafka:3.7' }}
-          KAFKA_BOOTSTRAP_SERVERS=${{ secrets.DEV_KAFKA_BOOTSTRAP_SERVERS || 'kafka:9092' }}
-          KAFKA_METRICS_TOPIC=${{ secrets.DEV_KAFKA_METRICS_TOPIC || 'train-guard.metrics.ingest' }}
-          KAFKA_CONSUMER_GROUP_ID=${{ secrets.DEV_KAFKA_CONSUMER_GROUP_ID || 'train-guard-worker' }}
-          KAFKA_CONSUMER_MIN_BYTES=${{ secrets.DEV_KAFKA_CONSUMER_MIN_BYTES || '1000' }}
-          KAFKA_CONSUMER_MAX_BYTES=${{ secrets.DEV_KAFKA_CONSUMER_MAX_BYTES || '10000000' }}
-          KAFKA_CONSUMER_MAX_WAIT=${{ secrets.DEV_KAFKA_CONSUMER_MAX_WAIT || '1s' }}
-          KAFKA_CONSUMER_AUTO_COMMIT=${{ secrets.DEV_KAFKA_CONSUMER_AUTO_COMMIT || 'true' }}
-          FRONTEND_PORT=${{ secrets.DEV_FRONTEND_PORT }}
-          BACKEND_PORT=${{ secrets.DEV_BACKEND_PORT }}
-          SECRET_KEY=${{ secrets.DEV_SECRET_KEY }}
-          JWT_EXPIRES_MINUTES=${{ secrets.DEV_JWT_EXPIRES_MINUTES }}
-          FLASK_DEBUG=0
-          CORS_ORIGINS=${{ secrets.DEV_CORS_ORIGINS }}
-          EMAIL_CODE_TTL_SECONDS=${{ secrets.DEV_EMAIL_CODE_TTL_SECONDS || '300' }}
-          EMAIL_CODE_COOLDOWN_SECONDS=${{ secrets.DEV_EMAIL_CODE_COOLDOWN_SECONDS || '60' }}
-          SMTP_HOST=${{ secrets.DEV_SMTP_HOST }}
-          SMTP_PORT=${{ secrets.DEV_SMTP_PORT }}
-          SMTP_USERNAME=${{ secrets.DEV_SMTP_USERNAME }}
-          SMTP_PASSWORD=${{ secrets.DEV_SMTP_PASSWORD }}
-          SMTP_USE_TLS=${{ secrets.DEV_SMTP_USE_TLS }}
-          SMTP_FROM_EMAIL=${{ secrets.DEV_SMTP_FROM_EMAIL }}
-          POSTGRES_DB=${{ secrets.DEV_POSTGRES_DB }}
-          POSTGRES_USER=${{ secrets.DEV_POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.DEV_POSTGRES_PASSWORD }}
-          ENVFILE
-
-      - name: Copy deploy files to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEV_SERVER_HOST }}
-          username: ${{ secrets.DEV_SERVER_USER }}
-          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
-          port: ${{ secrets.DEV_SERVER_PORT || '22' }}
-          source: .deploy-bundle/*
-          target: ${{ env.DEPLOY_PATH }}
-          strip_components: 1
-
-      - name: Pull and restart frontend on server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEV_SERVER_HOST }}
-          username: ${{ secrets.DEV_SERVER_USER }}
-          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
-          port: ${{ secrets.DEV_SERVER_PORT || '22' }}
-          script: |
-            set -euo pipefail
-            cd "${{ env.DEPLOY_PATH }}"
-            echo "${{ secrets.DEV_ACR_PASSWORD }}" | docker login "${{ secrets.DEV_ACR_REGISTRY }}" -u "${{ secrets.DEV_ACR_USERNAME }}" --password-stdin
-            docker compose --env-file .env -f docker-compose.dev.yml pull frontend
-            docker compose --env-file .env -f docker-compose.dev.yml up -d --remove-orphans frontend
-
-  deploy_worker:
-    needs: [detect, build_worker, deploy_backend]
-    if: |
-      always() &&
-      needs.detect.outputs.deploy_worker == 'true' &&
-      (needs.build_worker.result == 'success' || needs.build_worker.result == 'skipped') &&
-      (needs.deploy_backend.result == 'success' || needs.deploy_backend.result == 'skipped')
-    runs-on: ubuntu-latest
-    concurrency:
-      group: deploy-dev-worker
-      cancel-in-progress: true
-    env:
-      DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Prepare deployment bundle
-        env:
-          DEV_ACR_REGISTRY: ${{ secrets.DEV_ACR_REGISTRY }}
-          DEV_ACR_NAMESPACE: ${{ secrets.DEV_ACR_NAMESPACE }}
-          DEV_BACKEND_REPOSITORY: ${{ secrets.DEV_BACKEND_REPOSITORY }}
-          DEV_FRONTEND_REPOSITORY: ${{ secrets.DEV_FRONTEND_REPOSITORY }}
-          DEV_WORKER_REPOSITORY: ${{ secrets.DEV_WORKER_REPOSITORY }}
-        run: |
-          REGISTRY="$(echo "${DEV_ACR_REGISTRY}" | tr -d '\r\n' | xargs)"
-          NAMESPACE="$(echo "${DEV_ACR_NAMESPACE}" | tr -d '\r\n' | xargs)"
-          BACKEND_REPO="$(echo "${DEV_BACKEND_REPOSITORY}" | tr -d '\r\n' | xargs)"
-          FRONTEND_REPO="$(echo "${DEV_FRONTEND_REPOSITORY}" | tr -d '\r\n' | xargs)"
-          WORKER_REPO="$(echo "${DEV_WORKER_REPOSITORY}" | tr -d '\r\n' | xargs)"
-
-          REGISTRY="${REGISTRY#http://}"
-          REGISTRY="${REGISTRY#https://}"
-          REGISTRY="${REGISTRY%/}"
-          NAMESPACE="${NAMESPACE#/}"
-          NAMESPACE="${NAMESPACE%/}"
-          BACKEND_REPO="${BACKEND_REPO#/}"
-          BACKEND_REPO="${BACKEND_REPO%/}"
-          FRONTEND_REPO="${FRONTEND_REPO#/}"
-          FRONTEND_REPO="${FRONTEND_REPO%/}"
-          WORKER_REPO="${WORKER_REPO#/}"
-          WORKER_REPO="${WORKER_REPO%/}"
-
-          mkdir -p .deploy-bundle
-          cp docker-compose.dev.yml .deploy-bundle/docker-compose.dev.yml
-
-          cat > .deploy-bundle/.env <<ENVFILE
-          BACKEND_IMAGE=${REGISTRY}/${NAMESPACE}/${BACKEND_REPO}:dev
-          FRONTEND_IMAGE=${REGISTRY}/${NAMESPACE}/${FRONTEND_REPO}:dev
-          WORKER_IMAGE=${REGISTRY}/${NAMESPACE}/${WORKER_REPO}:dev
-          POSTGRES_IMAGE=${{ secrets.DEV_POSTGRES_IMAGE }}
-          REDIS_IMAGE=${{ secrets.DEV_REDIS_IMAGE }}
-          KAFKA_IMAGE=${{ secrets.DEV_KAFKA_IMAGE || 'bitnami/kafka:3.7' }}
-          KAFKA_BOOTSTRAP_SERVERS=${{ secrets.DEV_KAFKA_BOOTSTRAP_SERVERS || 'kafka:9092' }}
-          KAFKA_METRICS_TOPIC=${{ secrets.DEV_KAFKA_METRICS_TOPIC || 'train-guard.metrics.ingest' }}
-          KAFKA_CONSUMER_GROUP_ID=${{ secrets.DEV_KAFKA_CONSUMER_GROUP_ID || 'train-guard-worker' }}
-          KAFKA_CONSUMER_MIN_BYTES=${{ secrets.DEV_KAFKA_CONSUMER_MIN_BYTES || '1000' }}
-          KAFKA_CONSUMER_MAX_BYTES=${{ secrets.DEV_KAFKA_CONSUMER_MAX_BYTES || '10000000' }}
-          KAFKA_CONSUMER_MAX_WAIT=${{ secrets.DEV_KAFKA_CONSUMER_MAX_WAIT || '1s' }}
-          KAFKA_CONSUMER_AUTO_COMMIT=${{ secrets.DEV_KAFKA_CONSUMER_AUTO_COMMIT || 'true' }}
-          FRONTEND_PORT=${{ secrets.DEV_FRONTEND_PORT }}
-          BACKEND_PORT=${{ secrets.DEV_BACKEND_PORT }}
-          SECRET_KEY=${{ secrets.DEV_SECRET_KEY }}
-          JWT_EXPIRES_MINUTES=${{ secrets.DEV_JWT_EXPIRES_MINUTES }}
-          FLASK_DEBUG=0
-          CORS_ORIGINS=${{ secrets.DEV_CORS_ORIGINS }}
-          EMAIL_CODE_TTL_SECONDS=${{ secrets.DEV_EMAIL_CODE_TTL_SECONDS || '300' }}
-          EMAIL_CODE_COOLDOWN_SECONDS=${{ secrets.DEV_EMAIL_CODE_COOLDOWN_SECONDS || '60' }}
-          SMTP_HOST=${{ secrets.DEV_SMTP_HOST }}
-          SMTP_PORT=${{ secrets.DEV_SMTP_PORT }}
-          SMTP_USERNAME=${{ secrets.DEV_SMTP_USERNAME }}
-          SMTP_PASSWORD=${{ secrets.DEV_SMTP_PASSWORD }}
-          SMTP_USE_TLS=${{ secrets.DEV_SMTP_USE_TLS }}
-          SMTP_FROM_EMAIL=${{ secrets.DEV_SMTP_FROM_EMAIL }}
-          POSTGRES_DB=${{ secrets.DEV_POSTGRES_DB }}
-          POSTGRES_USER=${{ secrets.DEV_POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.DEV_POSTGRES_PASSWORD }}
-          ENVFILE
-
-      - name: Copy deploy files to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEV_SERVER_HOST }}
-          username: ${{ secrets.DEV_SERVER_USER }}
-          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
-          port: ${{ secrets.DEV_SERVER_PORT || '22' }}
-          source: .deploy-bundle/*
-          target: ${{ env.DEPLOY_PATH }}
-          strip_components: 1
-
-      - name: Pull and restart worker on server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEV_SERVER_HOST }}
-          username: ${{ secrets.DEV_SERVER_USER }}
-          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
-          port: ${{ secrets.DEV_SERVER_PORT || '22' }}
-          script: |
-            set -euo pipefail
-            cd "${{ env.DEPLOY_PATH }}"
-            echo "${{ secrets.DEV_ACR_PASSWORD }}" | docker login "${{ secrets.DEV_ACR_REGISTRY }}" -u "${{ secrets.DEV_ACR_USERNAME }}" --password-stdin
-            docker compose --env-file .env -f docker-compose.dev.yml pull worker
-            docker compose --env-file .env -f docker-compose.dev.yml up -d db redis kafka
-            for i in $(seq 1 10); do
-              if docker compose --env-file .env -f docker-compose.dev.yml run --rm backend flask --app run.py init-db; then
-                echo "Database initialized"
-                break
-              fi
-              if [[ "$i" -eq 10 ]]; then
-                echo "init-db failed after retries"
-                exit 1
-              fi
-              echo "init-db failed (attempt $i), retrying in 5s..."
-              sleep 5
-            done
-            docker compose --env-file .env -f docker-compose.dev.yml up -d --remove-orphans worker
+            docker compose --env-file .env -f docker-compose.dev.yml up -d --remove-orphans worker frontend
