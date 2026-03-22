@@ -1362,6 +1362,18 @@ a {
   --el-alert-text-color: #f6d48f;
 }
 
+:root[data-theme="dark"] .el-alert.el-alert--info {
+  --el-alert-bg-color: rgba(20, 39, 62, 0.82);
+  --el-alert-border-color: rgba(86, 126, 173, 0.42);
+  --el-alert-text-color: #d3e5fb;
+}
+
+:root[data-theme="dark"] .el-alert.el-alert--info .el-alert__description,
+:root[data-theme="dark"] .el-alert.el-alert--info .el-alert__title,
+:root[data-theme="dark"] .el-alert.el-alert--info .el-alert__icon {
+  color: #d3e5fb;
+}
+
 :root[data-theme="dark"] .el-alert.el-alert--warning .el-alert__description,
 :root[data-theme="dark"] .el-alert.el-alert--warning .el-alert__title,
 :root[data-theme="dark"] .el-alert.el-alert--warning .el-alert__icon {

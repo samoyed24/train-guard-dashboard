@@ -41,7 +41,7 @@
       <div class="editor-wrap">
         <el-alert
           v-if="selectedProject && !configs.length"
-          type="info"
+          type="warning"
           show-icon
           :closable="false"
           :title="t('configs.noCurrentConfig')"
