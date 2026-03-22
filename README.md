@@ -149,3 +149,11 @@ Agent 侧（app_id/app_secret 鉴权）：
 - `DEV_SERVER_USER` 对部署目录有读写权限
 - 开发机可访问阿里云 ACR，并可通过 `docker login <DEV_ACR_REGISTRY>` 拉取镜像
 - ACR 中需要提前创建 `DEV_BACKEND_REPOSITORY` / `DEV_FRONTEND_REPOSITORY` 两个仓库
+
+## 贡献者
+
+感谢所有为这个项目做出贡献的同学。
+
+<a href="https://github.com/samoyed24/train-guard-dashboard/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=samoyed24/train-guard-dashboard" alt="contributors" />
+</a>
