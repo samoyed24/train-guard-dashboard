@@ -291,7 +291,7 @@ const saveVersion = async () => {
 };
 
 const clearConfig = async () => {
-  if (!selectedProjectId.value || !configs.length) {
+  if (!selectedProjectId.value || !configs.value.length) {
     return;
   }
 
