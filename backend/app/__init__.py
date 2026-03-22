@@ -31,9 +31,12 @@ def create_app() -> Flask:
     @app.cli.command("init-db")
     def init_db_command():
         db.create_all()
-        if enable_timeseries_hypertable():
-            print("Database initialized (TimescaleDB hypertable enabled)")
+        if app.config.get("ENABLE_TIMESCALE", False):
+            if enable_timeseries_hypertable():
+                print("Database initialized (TimescaleDB hypertable enabled)")
+            else:
+                print("Database initialized (fallback to plain metric_series_points table)")
         else:
-            print("Database initialized (fallback to plain metric_series_points table)")
+            print("Database initialized (TimescaleDB disabled)")
 
     return app

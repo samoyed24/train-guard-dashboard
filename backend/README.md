@@ -107,8 +107,8 @@ uv sync
 }
 ```
 
-`init-db` 会在建表后尝试启用 TimescaleDB（hypertable）。
-若数据库未安装 TimescaleDB 扩展，会自动回退到普通 PostgreSQL 表存储时序点。
+`init-db` 默认仅建表，不会尝试启用 TimescaleDB。  
+若需启用 TimescaleDB，请设置 `ENABLE_TIMESCALE=true` 后再执行 `init-db`。
 
 ## Agent 对接
 

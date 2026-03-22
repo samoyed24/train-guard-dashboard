@@ -26,3 +26,4 @@ class Config:
     KAFKA_PRODUCER_LINGER_MS = int(os.getenv("KAFKA_PRODUCER_LINGER_MS", "10"))
     KAFKA_PRODUCER_RETRIES = int(os.getenv("KAFKA_PRODUCER_RETRIES", "3"))
     KAFKA_SEND_TIMEOUT_SECONDS = float(os.getenv("KAFKA_SEND_TIMEOUT_SECONDS", "3"))
+    ENABLE_TIMESCALE = os.getenv("ENABLE_TIMESCALE", "false").lower() == "true"
