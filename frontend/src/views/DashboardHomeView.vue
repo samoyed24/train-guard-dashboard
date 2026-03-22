@@ -35,7 +35,7 @@
 
     <section class="card overview-grid-card">
       <div class="overview-grid">
-        <div class="overview-col">
+        <div class="overview-col overview-col--apps">
           <div class="panel-head">
             <div>
               <p class="panel-kicker">Top Apps</p>
@@ -59,11 +59,16 @@
           <el-empty v-else :description="t('dashboard.noActivityData')" />
         </div>
 
-        <div class="overview-col">
+        <div class="overview-col overview-col--runs">
           <div class="panel-head">
-            <div>
+            <div class="panel-title-row">
               <p class="panel-kicker">Recent Runs</p>
-              <h3>{{ t("dashboard.recentRuns") }}</h3>
+              <div class="panel-title-with-tip">
+                <h3>{{ t("dashboard.recentRuns") }}</h3>
+                <el-tooltip :content="t('dashboard.runSelectHint')" placement="top">
+                  <button type="button" class="title-tip" :aria-label="t('dashboard.runSelectHint')">?</button>
+                </el-tooltip>
+              </div>
             </div>
             <el-button class="ghost-btn" size="small" @click="goApps">{{ t("dashboard.manageApps") }}</el-button>
           </div>
@@ -81,7 +86,6 @@
               <template #default="scope">{{ formatDate(scope.row.last_seen_at) }}</template>
             </el-table-column>
           </el-table>
-          <p class="table-empty-note">{{ t("dashboard.runSelectHint") }}</p>
         </div>
       </div>
     </section>
@@ -270,7 +274,7 @@ const appRunStats = computed<AppRunStat[]>(() => {
       };
     })
     .sort((a, b) => b.runCount - a.runCount)
-    .slice(0, 6);
+    .slice(0, 5);
 });
 
 const featuredLatestLabel = computed(() => formatMetricValue(featuredMetricPoints.value[featuredMetricPoints.value.length - 1]?.value));
