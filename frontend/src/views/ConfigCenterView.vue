@@ -21,7 +21,7 @@
 
       <div class="editor-wrap">
         <p class="panel-desc">{{ t("configs.addVersion") }}</p>
-        <el-form :model="configForm" label-width="112px" class="config-form">
+        <el-form :model="configForm" label-width="136px" class="config-form">
           <div class="config-grid">
             <section class="config-block">
               <p class="config-block-title">{{ t("configs.server") }}</p>
