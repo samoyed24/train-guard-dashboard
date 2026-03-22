@@ -41,6 +41,7 @@ services:
       - kafka
     environment:
       SECRET_KEY: ${SECRET_KEY}
+      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL}
       JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-120}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-train_guard}
       REDIS_URL: redis://redis:6379/0
