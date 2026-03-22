@@ -1,23 +1,29 @@
-name: Frontend Build Check
+name: Frontend Checks
 
 on:
   pull_request:
     branches:
       - dev
     paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-build-check.yml'
+      - "frontend/**"
+      - ".github/workflows/frontend-build-check.yml"
+  push:
+    branches:
+      - dev
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-build-check.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: frontend-build-check-${{ github.event.pull_request.number || github.ref }}
+  group: frontend-check-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  checks:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -49,6 +55,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Run dependency security audit
+        run: pnpm audit --audit-level=high --prod
+
+      - name: Run syntax check
+        run: pnpm run typecheck
 
       - name: Build frontend (mock mode)
         env:
