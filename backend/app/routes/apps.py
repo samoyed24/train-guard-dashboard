@@ -6,7 +6,7 @@ from flask import Blueprint, g, jsonify, request
 
 from ..extensions import db
 from ..models import Application, ConfigVersion, MetricRecord, MetricSeriesPoint, TrainingRun
-from ..redis_client import redis_set_json
+from ..redis_client import redis_cache
 from ..security import auth_required
 from ..timeseries import backfill_metric_series_for_run
 
@@ -145,9 +145,8 @@ def upsert_current_config(app_pk: int):
     row.is_active = True
     db.session.commit()
 
-    redis_set_json(f"config:active:{app.app_id}", row.content, ttl_seconds=3600)
+    redis_cache.set_active_config(app.app_id, row.content, ttl_seconds=3600)
     return jsonify(_serialize_config(row))
-
 
 @apps_bp.post("/<int:app_pk>/configs")
 @auth_required
@@ -181,7 +180,7 @@ def publish_config(app_pk: int, config_id: int):
     row.published_at = datetime.now(timezone.utc)
     db.session.commit()
 
-    redis_set_json(f"config:active:{app.app_id}", row.content, ttl_seconds=3600)
+    redis_cache.set_active_config(app.app_id, row.content, ttl_seconds=3600)
     return jsonify({"message": "published", "version": row.version})
 
 

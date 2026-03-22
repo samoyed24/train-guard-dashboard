@@ -8,7 +8,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from .extensions import db
 from .models import AccessKey, Application, User
-from .redis_client import redis_get, redis_setex
+from .redis_client import redis_cache, redis_keys
 
 
 def hash_password(password: str) -> str:
@@ -36,13 +36,13 @@ def decode_token(token: str):
 
 
 def token_blacklist_key(jti: str) -> str:
-    return f"auth:blacklist:{jti}"
+    return redis_keys.auth_blacklist(jti)
 
 
 def blacklist_token(jti: str, exp_ts: int) -> None:
     now_ts = int(datetime.now(timezone.utc).timestamp())
     ttl = max(exp_ts - now_ts, 1)
-    redis_setex(token_blacklist_key(jti), ttl, "1")
+    redis_cache.set_blacklisted_token(jti, ttl)
 
 
 def auth_required(fn):
@@ -60,7 +60,7 @@ def auth_required(fn):
         except jwt.InvalidTokenError:
             return jsonify({"message": "Invalid token"}), 401
 
-        if redis_get(token_blacklist_key(payload["jti"])):
+        if redis_cache.get_blacklisted_token(payload["jti"]):
             return jsonify({"message": "Token revoked"}), 401
 
         user = User.query.get(int(payload["sub"]))

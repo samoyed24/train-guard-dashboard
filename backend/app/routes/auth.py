@@ -5,7 +5,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 from ..email_client import send_email
 from ..extensions import db
 from ..models import Team, TeamMember, User
-from ..redis_client import redis_delete, redis_get, redis_setex
+from ..redis_client import redis_cache, redis_keys
 from ..security import auth_required, blacklist_token, generate_token, hash_password, verify_password
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -17,11 +17,11 @@ def internal_error_message(default_message: str, exc: Exception) -> str:
 
 
 def register_email_code_key(email: str) -> str:
-    return f"auth:register:email_code:{email}"
+    return redis_keys.register_email_code(email)
 
 
 def register_email_code_cooldown_key(email: str) -> str:
-    return f"auth:register:email_code:cooldown:{email}"
+    return redis_keys.register_email_code_cooldown(email)
 
 
 def generate_email_code() -> str:
@@ -39,8 +39,7 @@ def send_register_email_code():
     if User.query.filter_by(email=email).first():
         return jsonify({"message": "Email already exists"}), 409
 
-    cooldown_key = register_email_code_cooldown_key(email)
-    if redis_get(cooldown_key):
+    if redis_cache.get_register_email_code_cooldown(email):
         return jsonify({"message": "Please wait before requesting another code"}), 429
 
     code = generate_email_code()
@@ -57,8 +56,8 @@ def send_register_email_code():
             500,
         )
 
-    redis_setex(register_email_code_key(email), ttl_seconds, code)
-    redis_setex(cooldown_key, cooldown_seconds, "1")
+    redis_cache.set_register_email_code(email, ttl_seconds, code)
+    redis_cache.set_register_email_code_cooldown(email, cooldown_seconds)
 
     return jsonify({"message": "ok"})
 
@@ -77,14 +76,14 @@ def register():
     if User.query.filter_by(email=email).first():
         return jsonify({"message": "Email already exists"}), 409
 
-    saved_code = redis_get(register_email_code_key(email))
+    saved_code = redis_cache.get_register_email_code(email)
     if not saved_code or saved_code != verification_code:
         return jsonify({"message": "Invalid or expired verification code"}), 400
 
     user = User(email=email, name=name, password_hash=hash_password(password))
     db.session.add(user)
     db.session.commit()
-    redis_delete(register_email_code_key(email))
+    redis_cache.delete_register_email_code(email)
 
     # Bootstrap a default team for the very first account so team invitation flow is usable immediately.
     if Team.query.count() == 0:

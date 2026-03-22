@@ -6,7 +6,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 from ..extensions import db
 from ..kafka_client import publish_metric_ingest_event
 from ..models import Application, ConfigVersion, MetricRecord, TrainingRun
-from ..redis_client import redis_get_json, redis_set_json
+from ..redis_client import redis_cache
 from ..security import access_key_auth_required
 
 agent_bp = Blueprint("agent", __name__, url_prefix="/api")
@@ -51,8 +51,7 @@ def fetch_config():
     if not project:
         return jsonify({"message": "Project not found"}), 404
 
-    cache_key = f"config:active:{project.app_id}"
-    cached = redis_get_json(cache_key)
+    cached = redis_cache.get_active_config(project.app_id)
     if cached is not None:
         hydrated = _hydrate_config(cached, project)
         return jsonify({"code": 0, "data": {"config": hydrated, "from_cache": True}})
@@ -65,7 +64,7 @@ def fetch_config():
     if not active:
         return jsonify({"message": "No active config"}), 404
 
-    redis_set_json(cache_key, active.content, ttl_seconds=3600)
+    redis_cache.set_active_config(project.app_id, active.content, ttl_seconds=3600)
     hydrated = _hydrate_config(active.content, project)
     return jsonify({"code": 0, "data": {"config": hydrated, "from_cache": False}})
 

@@ -9,6 +9,7 @@ from sqlalchemy import JSON
 from app import create_app
 from app.extensions import db
 from app.models import AccessKey, Application, ConfigVersion, MetricRecord, User
+from app.redis_client import redis_keys
 from app.routes.auth import register_email_code_key
 from app.security import generate_token, hash_password
 
@@ -48,6 +49,36 @@ class FakeRedisStore:
             return None
         return json.loads(raw)
 
+    def get_register_email_code(self, email: str):
+        return self.get(register_email_code_key(email))
+
+    def set_register_email_code(self, email: str, ttl_seconds: int, code: str):
+        return self.setex(register_email_code_key(email), ttl_seconds, code)
+
+    def delete_register_email_code(self, email: str):
+        return self.delete(register_email_code_key(email))
+
+    def get_register_email_code_cooldown(self, email: str):
+        return self.get(redis_keys.register_email_code_cooldown(email))
+
+    def set_register_email_code_cooldown(self, email: str, ttl_seconds: int, value: str = "1"):
+        return self.setex(redis_keys.register_email_code_cooldown(email), ttl_seconds, value)
+
+    def get_blacklisted_token(self, jti: str):
+        return self.get(redis_keys.auth_blacklist(jti))
+
+    def set_blacklisted_token(self, jti: str, ttl_seconds: int):
+        return self.setex(redis_keys.auth_blacklist(jti), ttl_seconds, "1")
+
+    def get_active_config(self, project_id: str):
+        return self.get_json(redis_keys.active_config(project_id))
+
+    def set_active_config(self, project_id: str, value: dict, ttl_seconds: int = 3600):
+        return self.set_json(redis_keys.active_config(project_id), value, ttl_seconds=ttl_seconds)
+
+    def delete_active_config(self, project_id: str):
+        return self.delete(redis_keys.active_config(project_id))
+
 
 class BackendTestCase(unittest.TestCase):
     def setUp(self) -> None:
@@ -71,14 +102,10 @@ class BackendTestCase(unittest.TestCase):
 
         self.patches = [
             patch("app.routes.auth.send_email", self.fake_send_email),
-            patch("app.routes.auth.redis_get", self.redis.get),
-            patch("app.routes.auth.redis_setex", self.redis.setex),
-            patch("app.routes.auth.redis_delete", self.redis.delete),
-            patch("app.security.redis_get", self.redis.get),
-            patch("app.security.redis_setex", self.redis.setex),
-            patch("app.routes.agent.redis_get_json", self.redis.get_json),
-            patch("app.routes.agent.redis_set_json", self.redis.set_json),
-            patch("app.routes.apps.redis_set_json", self.redis.set_json),
+            patch("app.routes.auth.redis_cache", self.redis),
+            patch("app.security.redis_cache", self.redis),
+            patch("app.routes.agent.redis_cache", self.redis),
+            patch("app.routes.apps.redis_cache", self.redis),
             patch("app.routes.agent.publish_metric_ingest_event", self.fake_publish_metric_ingest_event),
             patch("app.routes.apps.backfill_metric_series_for_run", lambda run_id: None),
             patch("app.routes.dashboard.backfill_metric_series_for_run", lambda run_id: None),

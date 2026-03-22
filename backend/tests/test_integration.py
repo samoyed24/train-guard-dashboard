@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models import ConfigVersion, MetricRecord, MetricSeriesPoint, TrainingRun
+from app.redis_client import redis_keys
 
 from tests.test_support import BackendTestCase
 
@@ -13,7 +14,7 @@ class AuthFlowIntegrationTestCase(BackendTestCase):
         self.assertEqual(send_code.json, {"message": "ok"})
         self.assertEqual(len(self.sent_emails), 1)
 
-        code = self.redis.get(f"auth:register:email_code:{email}")
+        code = self.redis.get(redis_keys.register_email_code(email))
         register = self.client.post(
             "/api/auth/register",
             json={
