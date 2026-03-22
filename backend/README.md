@@ -83,8 +83,8 @@ uv sync
 - `GET /api/auth/me`
 - `POST /api/projects`
 - `GET /api/projects`
-- `POST /api/projects/:projectId/configs`
-- `POST /api/projects/:projectId/configs/:configId/publish`
+- `GET /api/projects/:projectId/config`
+- `PUT /api/projects/:projectId/config`
 - `GET /api/dashboard/overview`
 - `POST /api/agent/config/fetch`（Agent 用）
 - `POST /api/metrics/ingest`（Agent 用）
@@ -113,10 +113,10 @@ uv sync
 ## Agent 对接
 
 配置拉取支持：
-- Header: `X-Project-Id` / `X-Project-Secret`
-- Body: `project_id` / `project_secret`
+- Header: `X-Access-Key-Id` / `X-Secret-Key` / `X-Project-Id`
+- Body: `access_key_id` / `secret_key` / `project_id`
 
 数据上报鉴权支持：
-- Header 或 Query 携带 `project_id` / `project_secret`
+- Header 或 Query 携带 `access_key_id` / `secret_key` / `project_id`
 - 方便将 `server.url` 配置成：
-  - `http://localhost:8000/api/metrics/ingest?project_id=...&project_secret=...`
+  - `http://localhost:8000/api/metrics/ingest?project_id=...`

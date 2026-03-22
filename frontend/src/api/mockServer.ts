@@ -123,49 +123,42 @@ interface AuthFailure {
 
 type AuthResult = AuthSuccess | AuthFailure;
 
-interface ProjectAuthSuccess {
+interface AccessKeyAuthSuccess {
   ok: true;
-  app: MockApp;
+  accessKey: MockAccessKey;
+  user: MockUser;
 }
 
-interface ProjectAuthFailure {
+interface AccessKeyAuthFailure {
   ok: false;
   response: MockResponse;
 }
 
-type ProjectAuthResult = ProjectAuthSuccess | ProjectAuthFailure;
+type AccessKeyAuthResult = AccessKeyAuthSuccess | AccessKeyAuthFailure;
 
 const MOCK_DELAY_MS = 120;
 
 const defaultConfigV1: JsonObject = {
   server: {
-    url: "http://localhost:8000/api/metrics/ingest?project_id=project_demo_001&project_secret=secret_demo_001",
+    heartbeat_interval_seconds: 15,
     timeout: 10,
     retry_count: 3,
   },
   agent: {
     upload_frequency: "epoch",
     upload_interval: 1,
-    enable_async: true,
-  },
-  metrics: {
-    include_system_info: true,
   },
 };
 
 const defaultConfigV2: JsonObject = {
   server: {
-    url: "http://localhost:8000/api/metrics/ingest?project_id=project_demo_001&project_secret=secret_demo_001",
+    heartbeat_interval_seconds: 10,
     timeout: 8,
     retry_count: 2,
   },
   agent: {
     upload_frequency: "step",
     upload_interval: 20,
-    enable_async: true,
-  },
-  metrics: {
-    include_system_info: true,
   },
 };
 
@@ -1102,6 +1095,98 @@ export async function handleMockRequest(request: MockRequest): Promise<MockRespo
     return ok({ id: row.id, version: row.version, is_active: row.is_active }, 201);
   }
 
+  const currentConfigMatch = path.match(/^\/api\/projects\/(\d+)\/config$/);
+  if (currentConfigMatch && method === "GET") {
+    const auth = requireAuth(request);
+    if (!auth.ok) return auth.response;
+
+    const appPk = Number(currentConfigMatch[1]);
+    const app = findOwnedProject(appPk, auth.user.id);
+    if (!app) return fail(404, "Not found");
+
+    const row = state.configs
+      .filter((item) => item.app_pk === app.id)
+      .sort((a, b) => {
+        if (a.is_active !== b.is_active) {
+          return a.is_active ? -1 : 1;
+        }
+        return b.version - a.version;
+      })[0];
+
+    if (!row) {
+      return ok(null);
+    }
+
+    return ok({
+      id: row.id,
+      version: row.version,
+      is_active: row.is_active,
+      content: row.content,
+      created_at: row.created_at,
+      published_at: row.published_at,
+    });
+  }
+
+  if (currentConfigMatch && method === "PUT") {
+    const auth = requireAuth(request);
+    if (!auth.ok) return auth.response;
+
+    const appPk = Number(currentConfigMatch[1]);
+    const app = findOwnedProject(appPk, auth.user.id);
+    if (!app) return fail(404, "Not found");
+
+    const payload = asObject(request.body);
+    const content = payload?.content;
+    if (!isJsonObject(content)) {
+      return fail(400, "content must be JSON object");
+    }
+
+    let row = state.configs
+      .filter((item) => item.app_pk === app.id)
+      .sort((a, b) => {
+        if (a.is_active !== b.is_active) {
+          return a.is_active ? -1 : 1;
+        }
+        return b.version - a.version;
+      })[0];
+
+    if (row) {
+      row.content = content;
+      row.is_active = true;
+      row.published_at = nowIso();
+      row.published_by = auth.user.id;
+    } else {
+      row = {
+        id: state.nextIds.config++,
+        app_pk: app.id,
+        version: 1,
+        content,
+        is_active: true,
+        created_at: nowIso(),
+        published_at: nowIso(),
+        published_by: auth.user.id,
+      } as MockConfigVersion;
+      state.configs.push(row);
+    }
+
+    for (const item of state.configs) {
+      if (item.app_pk === app.id && item.id !== row.id) {
+        item.is_active = false;
+      }
+    }
+
+    state.activeConfigCache.set(app.app_id, clone(row.content));
+
+    return ok({
+      id: row.id,
+      version: row.version,
+      is_active: row.is_active,
+      content: row.content,
+      created_at: row.created_at,
+      published_at: row.published_at,
+    });
+  }
+
   const publishMatch = path.match(/^\/api\/projects\/(\d+)\/configs\/(\d+)\/publish$/);
   if (publishMatch && method === "POST") {
     const auth = requireAuth(request);
@@ -1226,52 +1311,62 @@ export async function handleMockRequest(request: MockRequest): Promise<MockRespo
   }
 
   if (method === "POST" && path === "/api/agent/config/fetch") {
-    const projectAuth = requireProjectAuth(request, url.searchParams);
-    if (!projectAuth.ok) return projectAuth.response;
+    const accessKeyAuth = requireAccessKeyAuth(request, url.searchParams);
+    if (!accessKeyAuth.ok) return accessKeyAuth.response;
 
-    const cache = state.activeConfigCache.get(projectAuth.app.app_id);
+    const project = findProjectForAccessKey(request, url.searchParams, accessKeyAuth.user.id);
+    if (!project) {
+      return fail(404, "Project not found");
+    }
+
+    const cache = state.activeConfigCache.get(project.app_id);
     if (cache) {
       return ok({
         code: 0,
         data: {
-          config: cache,
+          config: hydrateProjectConfig(cache, request, project),
           from_cache: true,
         },
       });
     }
 
     const activeConfig = state.configs
-      .filter((item) => item.app_pk === projectAuth.app.id && item.is_active)
+      .filter((item) => item.app_pk === project.id && item.is_active)
       .sort((a, b) => b.id - a.id)[0];
 
     if (!activeConfig) {
       return fail(404, "No active config");
     }
 
-    state.activeConfigCache.set(projectAuth.app.app_id, clone(activeConfig.content));
+    state.activeConfigCache.set(project.app_id, clone(activeConfig.content));
 
     return ok({
       code: 0,
       data: {
-        config: activeConfig.content,
+        config: hydrateProjectConfig(activeConfig.content, request, project),
         from_cache: false,
       },
     });
   }
 
   if (method === "POST" && path === "/api/metrics/ingest") {
-    const projectAuth = requireProjectAuth(request, url.searchParams);
-    if (!projectAuth.ok) return projectAuth.response;
+    const accessKeyAuth = requireAccessKeyAuth(request, url.searchParams);
+    if (!accessKeyAuth.ok) return accessKeyAuth.response;
+
+    const project = findProjectForAccessKey(request, url.searchParams, accessKeyAuth.user.id);
+    if (!project) {
+      return fail(404, "Project not found");
+    }
 
     const payload = asObject(request.body) ?? {};
     const trainId = asString(payload.train_id).trim() || "default";
     const now = nowIso();
 
-    let run = state.runs.find((item) => item.app_pk === projectAuth.app.id && item.train_id === trainId);
+    let run = state.runs.find((item) => item.app_pk === project.id && item.train_id === trainId);
     if (!run) {
       run = {
         id: state.nextIds.run++,
-        app_pk: projectAuth.app.id,
+        app_pk: project.id,
         train_id: trainId,
         first_seen_at: now,
         last_seen_at: now,
@@ -1387,33 +1482,55 @@ function requireAuth(request: MockRequest): AuthResult {
   return { ok: true, user, token };
 }
 
-function requireProjectAuth(request: MockRequest, query: URLSearchParams): ProjectAuthResult {
+function requireAccessKeyAuth(request: MockRequest, query: URLSearchParams): AccessKeyAuthResult {
   const body = asObject(request.body);
 
+  const accessKeyId =
+    asString(request.headers["x-access-key-id"]).trim() ||
+    asString(query.get("access_key_id") ?? "").trim() ||
+    asString(body?.access_key_id).trim();
+
+  const secretKey =
+    asString(request.headers["x-secret-key"]).trim() ||
+    asString(query.get("secret_key") ?? "").trim() ||
+    asString(body?.secret_key).trim();
+
+  if (!accessKeyId || !secretKey) {
+    return { ok: false, response: fail(401, "Invalid access key credentials") };
+  }
+
+  const accessKey = state.accessKeys.find(
+    (item) => item.access_key_id === accessKeyId && item.secret_key === secretKey && item.is_active,
+  );
+  if (!accessKey) {
+    return { ok: false, response: fail(401, "Invalid access key credentials") };
+  }
+
+  const user = state.users.find((item) => item.id === accessKey.user_id);
+  if (!user) {
+    return { ok: false, response: fail(401, "Access key owner not found") };
+  }
+
+  accessKey.last_used_at = nowIso();
+  return { ok: true, accessKey, user };
+}
+
+function findOwnedProject(appPk: number, userId: number): MockApp | undefined {
+  return state.apps.find((item) => item.id === appPk && item.created_by === userId);
+}
+
+function findProjectForAccessKey(request: MockRequest, query: URLSearchParams, userId: number): MockApp | undefined {
+  const body = asObject(request.body);
   const projectId =
     asString(request.headers["x-project-id"]).trim() ||
     asString(query.get("project_id") ?? "").trim() ||
     asString(body?.project_id).trim();
 
-  const projectSecret =
-    asString(request.headers["x-project-secret"]).trim() ||
-    asString(query.get("project_secret") ?? "").trim() ||
-    asString(body?.project_secret).trim();
-
-  if (!projectId || !projectSecret) {
-    return { ok: false, response: fail(401, "Invalid project credentials") };
+  if (!projectId) {
+    return undefined;
   }
 
-  const app = state.apps.find((item) => item.app_id === projectId && item.app_secret === projectSecret);
-  if (!app) {
-    return { ok: false, response: fail(401, "Invalid project credentials") };
-  }
-
-  return { ok: true, app };
-}
-
-function findOwnedProject(appPk: number, userId: number): MockApp | undefined {
-  return state.apps.find((item) => item.id === appPk && item.created_by === userId);
+  return state.apps.find((item) => item.app_id === projectId && item.created_by === userId && item.is_active);
 }
 
 function findMembershipByUserId(userId: number): MockTeamMember | undefined {
@@ -1523,6 +1640,17 @@ function toProjectListItem(app: MockApp) {
   };
 }
 
+function hydrateProjectConfig(content: unknown, request: MockRequest, project: MockApp) {
+  const hydrated = clone(content);
+  const root = asObject(hydrated) ?? {};
+  const server = asObject(root.server) ?? {};
+  const reportUrl = new URL("/api/metrics/ingest", request.url);
+  reportUrl.searchParams.set("project_id", project.app_id);
+  server.url = reportUrl.toString();
+  root.server = server;
+  return root;
+}
+
 function toAccessKeyListItem(accessKey: MockAccessKey) {
   return {
     id: accessKey.id,
@@ -1630,7 +1758,7 @@ function parseMetricNumber(value: unknown): number | null {
 }
 
 function isReservedMetricKey(key: string): boolean {
-  return ["train_id", "step", "global_step", "epoch", "timestamp", "time", "project_id", "project_secret"].includes(key);
+  return ["train_id", "step", "global_step", "epoch", "timestamp", "time", "project_id", "access_key_id", "secret_key"].includes(key);
 }
 
 function randomHex(len: number): string {

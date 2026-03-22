@@ -83,9 +83,8 @@ VITE_API_BASE_URL=http://localhost:8000
 - `POST /api/auth/logout`
 - `GET /api/projects`
 - `POST /api/projects`
-- `GET /api/projects/:projectId/configs`
-- `POST /api/projects/:projectId/configs`
-- `POST /api/projects/:projectId/configs/:configId/publish`
+- `GET /api/projects/:projectId/config`
+- `PUT /api/projects/:projectId/config`
 - `GET /api/dashboard/overview`
 - `GET /api/projects/:projectId/runs`
 - `GET /api/projects/:projectId/runs/:runId/metrics`
@@ -104,13 +103,14 @@ Agent 侧（project_id/project_secret 鉴权）：
 ## Agent 接入约定
 
 1. 在 Web 管理台创建项目，拿到 `project_id/project_secret`
-2. 在配置中心发布一个有效配置，包含 `server.url`
+2. 在配置中心发布一个有效配置
 3. Agent 拉取配置：
    - URL: `/api/agent/config/fetch`
-   - Header: `X-Project-Id`, `X-Project-Secret`
-   - Body: `{ "project_id": "...", "project_secret": "..." }`
-4. Agent 上报数据到 `server.url`（可使用 query 传鉴权）：
-   - `http://localhost:8000/api/metrics/ingest?project_id=...&project_secret=...`
+   - Header: `X-Access-Key-Id`, `X-Secret-Key`, `X-Project-Id`
+   - Body: `{ "access_key_id": "...", "secret_key": "...", "project_id": "..." }`
+4. Agent 上报数据到 `server.url`
+   - `server.url` 会在拉配置时由后端自动注入为 `/api/metrics/ingest?project_id=...`
+   - 请求 `/api/metrics/ingest` 时同样携带 `X-Access-Key-Id` / `X-Secret-Key`
 
 ## dev 分支自动部署（镜像构建 + 开发服务器部署）
 

@@ -20,6 +20,8 @@ var ignoredMetricKeys = map[string]struct{}{
 	"updated_at": {},
 	"project_id": {},
 	"project_secret": {},
+	"access_key_id": {},
+	"secret_key": {},
 }
 
 type Event struct {

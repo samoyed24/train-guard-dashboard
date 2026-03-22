@@ -11,91 +11,86 @@
 
       <div class="panel-meta">
         <span class="info-chip" v-if="selectedProject">{{ t("configs.currentApp", { name: selectedProject.name }) }}</span>
-        <span class="info-chip">{{ t("configs.versionCount", { count: configs.length }) }}</span>
-        <span class="info-chip">{{ t("configs.activeVersion", { version: activeConfigVersionLabel }) }}</span>
       </div>
 
-      <el-select v-model="selectedProjectId" :placeholder="t('configs.selectApp')" class="app-select" @change="onChangeProject">
-        <el-option v-for="item in projects" :key="item.id" :label="item.name + ' (' + item.project_id + ')'" :value="item.id" />
+      <el-select
+        v-model="selectedProjectId"
+        :placeholder="t('configs.selectApp')"
+        class="app-select"
+        @change="onChangeProject"
+      >
+        <el-option
+          v-for="item in projects"
+          :key="item.id"
+          :label="item.name + ' (' + item.project_id + ')'"
+          :value="item.id"
+        />
       </el-select>
 
+      <div class="config-endpoint-card" v-if="selectedProject">
+        <div>
+          <p class="config-endpoint-title">{{ t("configs.fetchApiTitle") }}</p>
+          <p class="panel-desc">{{ t("configs.fetchApiDesc") }}</p>
+        </div>
+        <div class="config-endpoint-row">
+          <el-input :model-value="configFetchUrl" readonly />
+          <el-button @click="copyFetchApiUrl">{{ t("configs.copyFetchApiUrl") }}</el-button>
+        </div>
+      </div>
+
       <div class="editor-wrap">
-        <p class="panel-desc">{{ t("configs.addVersion") }}</p>
-        <el-form :model="configForm" label-width="136px" class="config-form">
-          <div class="config-grid">
-            <section class="config-block">
-              <p class="config-block-title">{{ t("configs.server") }}</p>
-              <el-form-item :label="t('configs.reportUrl')">
-                <el-input
-                  v-model="configForm.serverUrl"
-                  :placeholder="t('configs.templateUrl')"
-                />
-              </el-form-item>
-              <el-form-item :label="t('configs.timeout')">
-                <el-input-number v-model="configForm.timeout" :min="1" :max="120" :step="1" />
-              </el-form-item>
-              <el-form-item :label="t('configs.retryCount')">
-                <el-input-number v-model="configForm.retryCount" :min="0" :max="10" :step="1" />
-              </el-form-item>
-            </section>
+        <el-tabs v-model="activeTab" class="config-tabs">
+          <el-tab-pane :label="t('configs.server')" name="server">
+            <el-form :model="configForm" label-width="136px" class="config-form">
+              <div class="config-grid">
+                <section class="config-block config-block--full">
+                  <p class="config-block-title">{{ t("configs.server") }}</p>
+                  <el-form-item :label="t('configs.reportUrl')">
+                    <el-input :model-value="reportEndpoint" readonly />
+                    <p class="field-hint">{{ t("configs.reportUrlHint") }}</p>
+                  </el-form-item>
+                  <el-form-item :label="t('configs.heartbeatInterval')">
+                    <el-input-number v-model="configForm.heartbeatInterval" :min="5" :max="60" :step="1" />
+                    <p class="field-hint">{{ t("configs.heartbeatHint") }}</p>
+                  </el-form-item>
+                  <el-form-item :label="t('configs.timeout')">
+                    <el-input-number v-model="configForm.timeout" :min="1" :max="120" :step="1" />
+                  </el-form-item>
+                  <el-form-item :label="t('configs.retryCount')">
+                    <el-input-number v-model="configForm.retryCount" :min="0" :max="10" :step="1" />
+                  </el-form-item>
+                </section>
+              </div>
+            </el-form>
+          </el-tab-pane>
 
-            <section class="config-block">
-              <p class="config-block-title">{{ t("configs.agent") }}</p>
-              <el-form-item :label="t('configs.uploadFrequency')">
-                <el-select
-                  v-model="configForm.uploadFrequency"
-                  filterable
-                  allow-create
-                  default-first-option
-                  :placeholder="t('configs.selectOrInput')"
-                >
-                  <el-option :label="t('configs.byEpoch')" value="epoch" />
-                  <el-option :label="t('configs.byStep')" value="step" />
-                  <el-option :label="t('configs.byTime')" value="time" />
-                </el-select>
-              </el-form-item>
-              <el-form-item :label="t('configs.uploadInterval')">
-                <el-input-number v-model="configForm.uploadInterval" :min="1" :max="100000" :step="1" />
-              </el-form-item>
-              <el-form-item :label="t('configs.asyncReport')">
-                <el-switch v-model="configForm.enableAsync" />
-              </el-form-item>
-            </section>
+          <el-tab-pane :label="t('configs.agent')" name="agent">
+            <el-form :model="configForm" label-width="136px" class="config-form">
+              <div class="config-grid">
+                <section class="config-block config-block--full">
+                  <p class="config-block-title">{{ t("configs.agent") }}</p>
+                  <el-form-item :label="t('configs.uploadFrequency')">
+                    <el-select v-model="configForm.uploadFrequency">
+                      <el-option :label="t('configs.byEpoch')" value="epoch" />
+                      <el-option :label="t('configs.byStep')" value="step" />
+                      <el-option :label="t('configs.byTime')" value="time" />
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item :label="t('configs.uploadInterval')">
+                    <el-input-number v-model="configForm.uploadInterval" :min="1" :max="100000" :step="1" />
+                    <p class="field-hint">{{ t("configs.uploadIntervalHint", { unit: uploadIntervalUnitLabel }) }}</p>
+                  </el-form-item>
+                </section>
+              </div>
+            </el-form>
+          </el-tab-pane>
+        </el-tabs>
 
-            <section class="config-block config-block--full">
-              <p class="config-block-title">{{ t("configs.metrics") }}</p>
-              <el-form-item :label="t('configs.includeSystemInfo')">
-                <el-switch v-model="configForm.includeSystemInfo" />
-              </el-form-item>
-            </section>
-          </div>
-        </el-form>
         <div class="action-row">
           <el-button type="primary" @click="saveVersion">{{ t("configs.saveVersion") }}</el-button>
           <el-button @click="fillTemplate">{{ t("configs.resetTemplate") }}</el-button>
-          <el-button :disabled="!configs.length" @click="refillFromCurrentVersion">{{ t("configs.refillCurrent") }}</el-button>
         </div>
       </div>
-    </section>
-
-    <section class="card">
-      <h3>{{ t("configs.versionList") }}</h3>
-      <el-table class="data-table" :data="configs" border :empty-text="t('configs.noVersion')">
-        <el-table-column prop="version" :label="t('configs.version')" width="90" />
-        <el-table-column prop="is_active" :label="t('configs.active')" width="90">
-          <template #default="scope">
-            <span>{{ scope.row.is_active ? t("common.yes") : t("common.no") }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" :label="t('apps.createdAt')" min-width="180">
-          <template #default="scope">{{ formatDate(scope.row.created_at) }}</template>
-        </el-table-column>
-        <el-table-column :label="t('configs.actions')" width="120">
-          <template #default="scope">
-            <el-button size="small" type="success" @click="publish(scope.row.id)">{{ t("configs.publish") }}</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
     </section>
   </div>
 </template>
@@ -106,7 +101,7 @@ import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
 import http from "../api/http";
 
-interface AppItem {
+interface ProjectItem {
   id: number;
   name: string;
   project_id: string;
@@ -121,40 +116,44 @@ interface ConfigVersion {
 }
 
 interface ConfigFormModel {
-  serverUrl: string;
+  heartbeatInterval: number;
   timeout: number;
   retryCount: number;
-  uploadFrequency: string;
+  uploadFrequency: "epoch" | "step" | "time";
   uploadInterval: number;
-  enableAsync: boolean;
-  includeSystemInfo: boolean;
 }
 
 interface ConfigPayload {
   server: {
-    url: string;
+    heartbeat_interval_seconds: number;
     timeout: number;
     retry_count: number;
   };
   agent: {
-    upload_frequency: string;
+    upload_frequency: "epoch" | "step" | "time";
     upload_interval: number;
-    enable_async: boolean;
-  };
-  metrics: {
-    include_system_info: boolean;
   };
 }
 
-const projects = ref<AppItem[]>([]);
 const { t } = useI18n();
+const projects = ref<ProjectItem[]>([]);
 const selectedProjectId = ref<number | null>(null);
 const configs = ref<ConfigVersion[]>([]);
+const activeTab = ref("server");
 const configForm = reactive<ConfigFormModel>(createTemplateForm());
 const selectedProject = computed(() => projects.value.find((item) => item.id === selectedProjectId.value) || null);
-const activeConfigVersionLabel = computed(() => {
-  const active = configs.value.find((item) => item.is_active);
-  return active ? `v${active.version}` : "-";
+const apiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
+const configFetchUrl = computed(() => `${apiBaseUrl}/api/agent/config/fetch`);
+const reportEndpoint = computed(() => {
+  if (!selectedProject.value) {
+    return `${apiBaseUrl}/api/metrics/ingest`;
+  }
+  return `${apiBaseUrl}/api/metrics/ingest?project_id=${selectedProject.value.project_id}`;
+});
+const uploadIntervalUnitLabel = computed(() => {
+  if (configForm.uploadFrequency === "epoch") return t("configs.intervalEpochUnit");
+  if (configForm.uploadFrequency === "step") return t("configs.intervalStepUnit");
+  return t("configs.intervalTimeUnit");
 });
 
 const formatDate = (value: string) => {
@@ -164,13 +163,11 @@ const formatDate = (value: string) => {
 
 function createTemplateForm(): ConfigFormModel {
   return {
-    serverUrl: t("configs.templateUrl"),
+    heartbeatInterval: 15,
     timeout: 10,
     retryCount: 3,
     uploadFrequency: "epoch",
     uploadInterval: 1,
-    enableAsync: true,
-    includeSystemInfo: true,
   };
 }
 
@@ -186,12 +183,13 @@ const toNumber = (value: unknown, fallback: number): number => {
   return Number.isFinite(raw) ? raw : fallback;
 };
 
-const toBoolean = (value: unknown, fallback: boolean): boolean => {
-  return typeof value === "boolean" ? value : fallback;
+const toInt = (value: unknown, fallback: number, min: number, max?: number): number => {
+  const normalized = Math.max(min, Math.trunc(toNumber(value, fallback)));
+  return typeof max === "number" ? Math.min(max, normalized) : normalized;
 };
 
-const toInt = (value: unknown, fallback: number, min: number): number => {
-  return Math.max(min, Math.trunc(toNumber(value, fallback)));
+const normalizeFrequency = (value: unknown): "epoch" | "step" | "time" => {
+  return value === "step" || value === "time" ? value : "epoch";
 };
 
 const fillTemplate = () => {
@@ -201,7 +199,6 @@ const fillTemplate = () => {
 const fillFormFromContent = (content: unknown) => {
   const template = createTemplateForm();
   const root = asObject(content);
-
   if (!root) {
     Object.assign(configForm, template);
     return;
@@ -209,19 +206,13 @@ const fillFormFromContent = (content: unknown) => {
 
   const server = asObject(root.server);
   const agent = asObject(root.agent);
-  const metrics = asObject(root.metrics);
 
   Object.assign(configForm, {
-    serverUrl: typeof server?.url === "string" ? server.url : template.serverUrl,
-    timeout: toInt(server?.timeout, template.timeout, 1),
-    retryCount: toInt(server?.retry_count, template.retryCount, 0),
-    uploadFrequency:
-      typeof agent?.upload_frequency === "string" && agent.upload_frequency
-        ? agent.upload_frequency
-        : template.uploadFrequency,
+    heartbeatInterval: toInt(server?.heartbeat_interval_seconds, template.heartbeatInterval, 5, 60),
+    timeout: toInt(server?.timeout, template.timeout, 1, 120),
+    retryCount: toInt(server?.retry_count, template.retryCount, 0, 10),
+    uploadFrequency: normalizeFrequency(agent?.upload_frequency),
     uploadInterval: toInt(agent?.upload_interval, template.uploadInterval, 1),
-    enableAsync: toBoolean(agent?.enable_async, template.enableAsync),
-    includeSystemInfo: toBoolean(metrics?.include_system_info, template.includeSystemInfo),
   });
 };
 
@@ -234,35 +225,23 @@ const syncFormFromCurrentConfigs = () => {
   fillTemplate();
 };
 
-const refillFromCurrentVersion = () => {
-  syncFormFromCurrentConfigs();
-  const current = configs.value.find((item) => item.is_active) ?? configs.value[0];
-  if (current) {
-    ElMessage.success(t("configs.refilledVersion", { version: current.version }));
-  }
-};
-
 const buildPayload = (): ConfigPayload => {
   const template = createTemplateForm();
   return {
     server: {
-      url: configForm.serverUrl.trim(),
-      timeout: toInt(configForm.timeout, template.timeout, 1),
-      retry_count: toInt(configForm.retryCount, template.retryCount, 0),
+      heartbeat_interval_seconds: toInt(configForm.heartbeatInterval, template.heartbeatInterval, 5, 60),
+      timeout: toInt(configForm.timeout, template.timeout, 1, 120),
+      retry_count: toInt(configForm.retryCount, template.retryCount, 0, 10),
     },
     agent: {
-      upload_frequency: configForm.uploadFrequency.trim() || template.uploadFrequency,
+      upload_frequency: normalizeFrequency(configForm.uploadFrequency),
       upload_interval: toInt(configForm.uploadInterval, template.uploadInterval, 1),
-      enable_async: !!configForm.enableAsync,
-    },
-    metrics: {
-      include_system_info: !!configForm.includeSystemInfo,
     },
   };
 };
 
 const loadProjects = async () => {
-  const { data } = await http.get<AppItem[]>("/api/projects");
+  const { data } = await http.get<ProjectItem[]>("/api/projects");
   projects.value = data;
 
   if (!data.length) {
@@ -286,13 +265,22 @@ const loadConfigs = async () => {
     return;
   }
 
-  const { data } = await http.get<ConfigVersion[]>(`/api/projects/${selectedProjectId.value}/configs`);
-  configs.value = data;
+  const { data } = await http.get<ConfigVersion | null>(`/api/projects/${selectedProjectId.value}/config`);
+  configs.value = data ? [data] : [];
 };
 
 const onChangeProject = async () => {
   await loadConfigs();
   syncFormFromCurrentConfigs();
+};
+
+const copyFetchApiUrl = async () => {
+  try {
+    await navigator.clipboard.writeText(configFetchUrl.value);
+    ElMessage.success(t("configs.fetchApiCopied"));
+  } catch {
+    ElMessage.error(t("configs.fetchApiCopyFailed"));
+  }
 };
 
 const saveVersion = async () => {
@@ -301,30 +289,13 @@ const saveVersion = async () => {
     return;
   }
 
-  const url = configForm.serverUrl.trim();
-  if (!url) {
-    ElMessage.warning(t("configs.inputReportUrl"));
-    return;
-  }
-
   try {
     const content = buildPayload();
-    await http.post(`/api/projects/${selectedProjectId.value}/configs`, { content });
+    await http.put(`/api/projects/${selectedProjectId.value}/config`, { content });
     ElMessage.success(t("configs.versionSaved"));
     await loadConfigs();
   } catch (e: any) {
     ElMessage.error(e?.response?.data?.message || t("configs.saveFailed"));
-  }
-};
-
-const publish = async (id: number) => {
-  if (!selectedProjectId.value) return;
-  try {
-    await http.post(`/api/projects/${selectedProjectId.value}/configs/${id}/publish`);
-    ElMessage.success(t("configs.published"));
-    await loadConfigs();
-  } catch {
-    ElMessage.error(t("configs.publishFailed"));
   }
 };
 

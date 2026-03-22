@@ -153,8 +153,57 @@ a {
   gap: 10px;
 }
 
+.config-endpoint-card {
+  margin-top: 16px;
+  border: 1px solid rgba(153, 179, 214, 0.48);
+  border-radius: var(--radius-md);
+  background: rgba(239, 248, 255, 0.72);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.config-endpoint-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  color: #264769;
+}
+
+.config-endpoint-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
 .config-form {
   margin-top: 4px;
+}
+
+.config-tabs {
+  margin-top: 6px;
+}
+
+.config-tabs .el-tabs__header {
+  margin: 0 0 14px;
+}
+
+.config-tabs .el-tabs__nav-wrap::after {
+  background: rgba(162, 188, 224, 0.4);
+}
+
+.config-tabs .el-tabs__item {
+  color: #517096;
+  font-weight: 600;
+}
+
+.config-tabs .el-tabs__item.is-active {
+  color: var(--brand-deep);
+}
+
+.config-tabs .el-tabs__active-bar {
+  background: var(--brand-deep);
 }
 
 .config-grid {
@@ -200,6 +249,13 @@ a {
 .config-form .el-select,
 .config-form .el-input-number {
   width: 100%;
+}
+
+.field-hint {
+  margin: 6px 0 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--ink-muted);
 }
 
 .action-row {
@@ -1266,6 +1322,7 @@ a {
 :root[data-theme="dark"] .pulse-stat-pill,
 :root[data-theme="dark"] .metric-quick-stat,
 :root[data-theme="dark"] .info-chip,
+:root[data-theme="dark"] .config-endpoint-card,
 :root[data-theme="dark"] .team-permission-card,
 :root[data-theme="dark"] .config-block,
 :root[data-theme="dark"] .metric-chart-card,
@@ -1281,6 +1338,7 @@ a {
 :root[data-theme="dark"] .pulse-stat-pill strong,
 :root[data-theme="dark"] .metric-quick-stat strong,
 :root[data-theme="dark"] .app-rank-head strong,
+:root[data-theme="dark"] .config-endpoint-title,
 :root[data-theme="dark"] .config-block-title,
 :root[data-theme="dark"] .team-permission-card h4,
 :root[data-theme="dark"] .data-table .cell {
@@ -1294,8 +1352,25 @@ a {
 :root[data-theme="dark"] .app-rank-head span,
 :root[data-theme="dark"] .app-rank-head em,
 :root[data-theme="dark"] .team-permission-card ul,
-:root[data-theme="dark"] .info-chip {
+:root[data-theme="dark"] .info-chip,
+:root[data-theme="dark"] .field-hint {
   color: #a6bfdb;
+}
+
+:root[data-theme="dark"] .config-tabs .el-tabs__nav-wrap::after {
+  background: rgba(77, 111, 151, 0.46);
+}
+
+:root[data-theme="dark"] .config-tabs .el-tabs__item {
+  color: #9fb7d5;
+}
+
+:root[data-theme="dark"] .config-tabs .el-tabs__item.is-active {
+  color: #dfeeff;
+}
+
+:root[data-theme="dark"] .config-tabs .el-tabs__active-bar {
+  background: #7fc5ff;
 }
 
 :root[data-theme="dark"] .data-table.el-table {
@@ -2012,6 +2087,10 @@ a {
   }
 
   .config-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .config-endpoint-row {
     grid-template-columns: 1fr;
   }
 

@@ -31,6 +31,20 @@ def _parse_limit(raw: str | None, default: int, min_value: int, max_value: int) 
     return min(max(value, min_value), max_value)
 
 
+def _serialize_config(row: ConfigVersion | None):
+    if not row:
+        return None
+
+    return {
+        "id": row.id,
+        "version": row.version,
+        "is_active": row.is_active,
+        "content": row.content,
+        "created_at": row.created_at.isoformat(),
+        "published_at": row.published_at.isoformat() if row.published_at else None,
+    }
+
+
 @apps_bp.get("")
 @auth_required
 def list_apps():
@@ -80,6 +94,57 @@ def list_configs(app_pk: int):
             for r in rows
         ]
     )
+
+
+@apps_bp.get("/<int:app_pk>/config")
+@auth_required
+def get_current_config(app_pk: int):
+    app = Application.query.filter_by(id=app_pk, created_by=g.user.id).first_or_404()
+    row = (
+        ConfigVersion.query.filter_by(app_id=app.id)
+        .order_by(ConfigVersion.is_active.desc(), ConfigVersion.version.desc(), ConfigVersion.id.desc())
+        .first()
+    )
+    return jsonify(_serialize_config(row))
+
+
+@apps_bp.put("/<int:app_pk>/config")
+@auth_required
+def upsert_current_config(app_pk: int):
+    app = Application.query.filter_by(id=app_pk, created_by=g.user.id).first_or_404()
+    data = request.get_json() or {}
+    content = data.get("content")
+    if not isinstance(content, dict):
+        return jsonify({"message": "content must be JSON object"}), 400
+
+    current = (
+        ConfigVersion.query.filter_by(app_id=app.id)
+        .order_by(ConfigVersion.is_active.desc(), ConfigVersion.version.desc(), ConfigVersion.id.desc())
+        .first()
+    )
+
+    if current:
+        current.content = content
+        current.is_active = True
+        current.published_by = g.user.id
+        current.published_at = datetime.now(timezone.utc)
+        row = current
+    else:
+        row = ConfigVersion(
+            app_id=app.id,
+            version=1,
+            content=content,
+            is_active=True,
+            published_by=g.user.id,
+            published_at=datetime.now(timezone.utc),
+        )
+        db.session.add(row)
+
+    ConfigVersion.query.filter(ConfigVersion.app_id == app.id, ConfigVersion.id != row.id).update({"is_active": False})
+    db.session.commit()
+
+    redis_set_json(f"config:active:{app.app_id}", row.content, ttl_seconds=3600)
+    return jsonify(_serialize_config(row))
 
 
 @apps_bp.post("/<int:app_pk>/configs")

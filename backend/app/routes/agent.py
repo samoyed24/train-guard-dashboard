@@ -1,24 +1,67 @@
+from copy import deepcopy
 from datetime import datetime, timezone
+from urllib.parse import urlencode
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 
 from ..extensions import db
 from ..kafka_client import publish_metric_ingest_event
-from ..models import ConfigVersion, MetricRecord, TrainingRun
+from ..models import Application, ConfigVersion, MetricRecord, TrainingRun
 from ..redis_client import redis_get_json, redis_set_json
-from ..security import project_auth_required
+from ..security import access_key_auth_required
 
 agent_bp = Blueprint("agent", __name__, url_prefix="/api")
 
 
+def _resolve_project():
+    project_id = (
+        request.headers.get("X-Project-Id")
+        or request.args.get("project_id")
+        or (request.get_json(silent=True) or {}).get("project_id")
+    )
+    project_id = (project_id or "").strip()
+    if not project_id:
+        return None
+
+    return Application.query.filter_by(
+        app_id=project_id,
+        created_by=g.access_key_user.id,
+        is_active=True,
+    ).first()
+
+
+def _build_public_api_base_url() -> str:
+    configured = (current_app.config.get("PUBLIC_API_BASE_URL") or "").strip()
+    if configured:
+        return configured.rstrip("/")
+    return request.host_url.rstrip("/")
+
+
+def _build_ingest_url(project: Application) -> str:
+    base_url = _build_public_api_base_url()
+    query = urlencode({"project_id": project.app_id})
+    return f"{base_url}/api/metrics/ingest?{query}"
+
+
+def _hydrate_config(content: dict, project: Application) -> dict:
+    hydrated = deepcopy(content)
+    server = hydrated.setdefault("server", {})
+    server["url"] = _build_ingest_url(project)
+    return hydrated
+
+
 @agent_bp.post("/agent/config/fetch")
-@project_auth_required
+@access_key_auth_required
 def fetch_config():
-    project = g.project
+    project = _resolve_project()
+    if not project:
+        return jsonify({"message": "Project not found"}), 404
+
     cache_key = f"config:active:{project.app_id}"
     cached = redis_get_json(cache_key)
     if cached is not None:
-        return jsonify({"code": 0, "data": {"config": cached, "from_cache": True}})
+        hydrated = _hydrate_config(cached, project)
+        return jsonify({"code": 0, "data": {"config": hydrated, "from_cache": True}})
 
     active = (
         ConfigVersion.query.filter_by(app_id=project.id, is_active=True)
@@ -29,13 +72,17 @@ def fetch_config():
         return jsonify({"message": "No active config"}), 404
 
     redis_set_json(cache_key, active.content, ttl_seconds=3600)
-    return jsonify({"code": 0, "data": {"config": active.content, "from_cache": False}})
+    hydrated = _hydrate_config(active.content, project)
+    return jsonify({"code": 0, "data": {"config": hydrated, "from_cache": False}})
 
 
 @agent_bp.post("/metrics/ingest")
-@project_auth_required
+@access_key_auth_required
 def ingest_metrics():
-    project = g.project
+    project = _resolve_project()
+    if not project:
+        return jsonify({"message": "Project not found"}), 404
+
     payload = request.get_json() or {}
     if not isinstance(payload, dict):
         return jsonify({"message": "payload must be JSON object"}), 400

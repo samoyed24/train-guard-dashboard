@@ -3,6 +3,7 @@ import os
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
+    PUBLIC_API_BASE_URL = os.getenv("PUBLIC_API_BASE_URL", "").strip()
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/train_guard"
     )

@@ -6,7 +6,8 @@ import jwt
 from flask import current_app, g, jsonify, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from .models import Application, User
+from .extensions import db
+from .models import AccessKey, Application, User
 from .redis_client import redis_get, redis_setex
 
 
@@ -99,6 +100,48 @@ def project_auth_required(fn):
             return jsonify({"message": "Invalid project credentials"}), 401
 
         g.project = app
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def validate_access_key_credentials(access_key_id: str, secret_key: str):
+    if not access_key_id or not secret_key:
+        return None
+
+    access_key = AccessKey.query.filter_by(access_key_id=access_key_id, is_active=True).first()
+    if not access_key:
+        return None
+
+    if not check_password_hash(access_key.secret_key_hash, secret_key):
+        return None
+
+    return access_key
+
+
+def access_key_auth_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        access_key_id = request.headers.get("X-Access-Key-Id") or request.args.get("access_key_id")
+        secret_key = request.headers.get("X-Secret-Key") or request.args.get("secret_key")
+
+        body = request.get_json(silent=True) or {}
+        access_key_id = access_key_id or body.get("access_key_id")
+        secret_key = secret_key or body.get("secret_key")
+
+        access_key = validate_access_key_credentials(access_key_id, secret_key)
+        if not access_key:
+            return jsonify({"message": "Invalid access key credentials"}), 401
+
+        user = User.query.get(access_key.user_id)
+        if not user:
+            return jsonify({"message": "Access key owner not found"}), 401
+
+        access_key.last_used_at = datetime.now(timezone.utc)
+        db.session.commit()
+
+        g.access_key = access_key
+        g.access_key_user = user
         return fn(*args, **kwargs)
 
     return wrapper
