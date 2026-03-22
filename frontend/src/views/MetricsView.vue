@@ -12,7 +12,7 @@
       <div class="stat-strip">
         <div class="stat-pill">
           <span>{{ t("metrics.appCount") }}</span>
-          <strong>{{ apps.length }}</strong>
+          <strong>{{ projects.length }}</strong>
         </div>
         <div class="stat-pill">
           <span>{{ t("metrics.runCount") }}</span>
@@ -24,8 +24,8 @@
         </div>
       </div>
 
-      <el-select v-model="selectedAppId" :placeholder="t('metrics.selectApp')" class="app-select" @change="loadRuns">
-        <el-option v-for="item in apps" :key="item.id" :label="item.name + ' (' + item.app_id + ')'" :value="item.id" />
+      <el-select v-model="selectedProjectId" :placeholder="t('metrics.selectApp')" class="app-select" @change="loadRuns">
+        <el-option v-for="item in projects" :key="item.id" :label="item.name + ' (' + item.project_id + ')'" :value="item.id" />
       </el-select>
 
       <el-table
@@ -162,7 +162,7 @@ import http from "../api/http";
 interface AppItem {
   id: number;
   name: string;
-  app_id: string;
+  project_id: string;
 }
 
 interface RunItem {
@@ -201,11 +201,11 @@ const chartPaddingX = 24;
 const chartPaddingY = 20;
 const { t } = useI18n();
 
-const apps = ref<AppItem[]>([]);
+const projects = ref<AppItem[]>([]);
 const runs = ref<RunItem[]>([]);
 const metricNames = ref<string[]>([]);
 const metricPoints = ref<MetricPoint[]>([]);
-const selectedAppId = ref<number | null>(null);
+const selectedProjectId = ref<number | null>(null);
 const selectedRunId = ref<number | null>(null);
 const selectedRunTrainId = ref("");
 const selectedMetric = ref("");
@@ -300,20 +300,20 @@ const formatMetricValue = (value: number | null | undefined) => {
   return value.toFixed(6);
 };
 
-const loadApps = async () => {
+const loadProjects = async () => {
   try {
-    const { data } = await http.get<AppItem[]>("/api/apps");
-    apps.value = data;
+    const { data } = await http.get<AppItem[]>("/api/projects");
+    projects.value = data;
 
     if (!data.length) {
-      selectedAppId.value = null;
+      selectedProjectId.value = null;
       runs.value = [];
       resetRunSelection();
       return;
     }
 
-    if (!selectedAppId.value || !data.some((item) => item.id === selectedAppId.value)) {
-      selectedAppId.value = data[0].id;
+    if (!selectedProjectId.value || !data.some((item) => item.id === selectedProjectId.value)) {
+      selectedProjectId.value = data[0].id;
     }
 
     await loadRuns();
@@ -323,7 +323,7 @@ const loadApps = async () => {
 };
 
 const loadRuns = async () => {
-  if (!selectedAppId.value) {
+  if (!selectedProjectId.value) {
     runs.value = [];
     resetRunSelection();
     return;
@@ -331,7 +331,7 @@ const loadRuns = async () => {
 
   try {
     const previousRunId = selectedRunId.value;
-    const { data } = await http.get<RunItem[]>(`/api/apps/${selectedAppId.value}/runs`);
+    const { data } = await http.get<RunItem[]>(`/api/projects/${selectedProjectId.value}/runs`);
     runs.value = data;
 
     if (!data.length) {
@@ -355,7 +355,7 @@ const resetRunSelection = () => {
 };
 
 const loadSeries = async (runId: number, metric?: string) => {
-  if (!selectedAppId.value) return;
+  if (!selectedProjectId.value) return;
 
   loadingSeries.value = true;
   try {
@@ -365,7 +365,7 @@ const loadSeries = async (runId: number, metric?: string) => {
     }
 
     const { data } = await http.get<MetricSeriesResponse>(
-      `/api/apps/${selectedAppId.value}/runs/${runId}/metrics/series?${query.toString()}`,
+      `/api/projects/${selectedProjectId.value}/runs/${runId}/metrics/series?${query.toString()}`,
     );
 
     metricNames.value = Array.isArray(data.metric_names) ? data.metric_names : [];
@@ -414,5 +414,5 @@ const getRunRowClass = ({ row }: { row: RunItem }) => {
   return row.id === selectedRunId.value ? "run-row is-selected" : "run-row";
 };
 
-onMounted(loadApps);
+onMounted(loadProjects);
 </script>

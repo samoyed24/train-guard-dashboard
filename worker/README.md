@@ -12,8 +12,8 @@
 
 ```json
 {
-  "app_pk": 1,
-  "app_id": "app_xxx",
+  "project_pk": 1,
+  "project_id": "project_xxx",
   "run_id": 12,
   "record_id": 1288,
   "train_id": "train-001",

@@ -81,14 +81,14 @@ uv sync
 - `POST /api/auth/register/email-code`
 - `POST /api/auth/login`
 - `GET /api/auth/me`
-- `POST /api/apps`
-- `GET /api/apps`
-- `POST /api/apps/:appId/configs`
-- `POST /api/apps/:appId/configs/:configId/publish`
+- `POST /api/projects`
+- `GET /api/projects`
+- `POST /api/projects/:projectId/configs`
+- `POST /api/projects/:projectId/configs/:configId/publish`
 - `GET /api/dashboard/overview`
 - `POST /api/agent/config/fetch`（Agent 用）
 - `POST /api/metrics/ingest`（Agent 用）
-- `GET /api/apps/:appId/runs/:runId/metrics/series`
+- `GET /api/projects/:projectId/runs/:runId/metrics/series`
 
 `POST /api/metrics/ingest` 成功返回示例（202）：
 
@@ -113,10 +113,10 @@ uv sync
 ## Agent 对接
 
 配置拉取支持：
-- Header: `X-App-Id` / `X-App-Secret`
-- Body: `app_id` / `app_secret`
+- Header: `X-Project-Id` / `X-Project-Secret`
+- Body: `project_id` / `project_secret`
 
 数据上报鉴权支持：
-- Header 或 Query 携带 `app_id` / `app_secret`
+- Header 或 Query 携带 `project_id` / `project_secret`
 - 方便将 `server.url` 配置成：
-  - `http://localhost:8000/api/metrics/ingest?app_id=...&app_secret=...`
+  - `http://localhost:8000/api/metrics/ingest?project_id=...&project_secret=...`

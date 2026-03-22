@@ -35,17 +35,17 @@ def _to_iso(value: datetime | None) -> str | None:
 @auth_required
 def dashboard_overview():
     recent_limit = _parse_limit(request.args.get("recent_limit"), default=8, min_value=1, max_value=30)
-    app_rank_limit = _parse_limit(request.args.get("app_rank_limit"), default=6, min_value=1, max_value=20)
+    project_rank_limit = _parse_limit(request.args.get("project_rank_limit"), default=6, min_value=1, max_value=20)
     pulse_limit = _parse_limit(request.args.get("pulse_limit"), default=80, min_value=10, max_value=500)
     featured_run_id = _parse_optional_int(request.args.get("featured_run_id"))
     requested_metric = (request.args.get("metric") or "").strip()
 
     app_rows = Application.query.filter_by(created_by=g.user.id).order_by(Application.id.desc()).all()
-    apps_payload = [
+    projects_payload = [
         {
             "id": app.id,
             "name": app.name,
-            "app_id": app.app_id,
+            "project_id": app.app_id,
             "created_at": app.created_at.isoformat(),
         }
         for app in app_rows
@@ -55,13 +55,13 @@ def dashboard_overview():
         return jsonify(
             {
                 "summary": {
-                    "app_count": 0,
+                    "project_count": 0,
                     "run_count": 0,
                     "active_runs_24h": 0,
                     "latest_report_at": None,
                 },
-                "apps": [],
-                "app_run_stats": [],
+                "projects": [],
+                "project_run_stats": [],
                 "recent_runs": [],
                 "featured": {
                     "run": None,
@@ -92,9 +92,9 @@ def dashboard_overview():
 
     app_stat_rows = (
         db.session.query(
-            Application.id.label("app_pk"),
-            Application.name.label("app_name"),
-            Application.app_id.label("app_id"),
+            Application.id.label("project_pk"),
+            Application.name.label("project_name"),
+            Application.app_id.label("project_id"),
             func.count(TrainingRun.id).label("run_count"),
             func.max(TrainingRun.last_seen_at).label("latest_report_at"),
         )
@@ -104,12 +104,12 @@ def dashboard_overview():
         .all()
     )
 
-    app_stats_payload = sorted(
+    project_stats_payload = sorted(
         [
             {
-                "app_pk": int(row.app_pk),
-                "name": str(row.app_name),
-                "app_id": str(row.app_id),
+                "project_pk": int(row.project_pk),
+                "name": str(row.project_name),
+                "project_id": str(row.project_id),
                 "run_count": int(row.run_count or 0),
                 "latest_report_at": _to_iso(row.latest_report_at),
                 "_latest_ts": row.latest_report_at.timestamp() if row.latest_report_at else 0.0,
@@ -118,9 +118,9 @@ def dashboard_overview():
         ],
         key=lambda item: (item["run_count"], item["_latest_ts"]),
         reverse=True,
-    )[:app_rank_limit]
+    )[:project_rank_limit]
 
-    for item in app_stats_payload:
+    for item in project_stats_payload:
         item.pop("_latest_ts", None)
 
     recent_rows = (
@@ -138,9 +138,9 @@ def dashboard_overview():
             "train_id": run.train_id,
             "first_seen_at": run.first_seen_at.isoformat(),
             "last_seen_at": run.last_seen_at.isoformat(),
-            "app_pk": app.id,
-            "app_name": app.name,
-            "app_id": app.app_id,
+            "project_pk": app.id,
+            "project_name": app.name,
+            "project_id": app.app_id,
         }
         for run, app in recent_rows
     ]
@@ -208,9 +208,9 @@ def dashboard_overview():
                 "train_id": featured_run.train_id,
                 "first_seen_at": featured_run.first_seen_at.isoformat(),
                 "last_seen_at": featured_run.last_seen_at.isoformat(),
-                "app_pk": featured_app.id,
-                "app_name": featured_app.name,
-                "app_id": featured_app.app_id,
+                "project_pk": featured_app.id,
+                "project_name": featured_app.name,
+                "project_id": featured_app.app_id,
             },
             "metric_names": metric_names,
             "selected_metric": selected_metric,
@@ -220,13 +220,13 @@ def dashboard_overview():
     return jsonify(
         {
             "summary": {
-                "app_count": len(app_rows),
+                "project_count": len(app_rows),
                 "run_count": int(run_count),
                 "active_runs_24h": int(active_runs_24h),
                 "latest_report_at": _to_iso(latest_report_at),
             },
-            "apps": apps_payload,
-            "app_run_stats": app_stats_payload,
+            "projects": projects_payload,
+            "project_run_stats": project_stats_payload,
             "recent_runs": recent_runs_payload,
             "featured": featured_payload,
         }

@@ -6,22 +6,22 @@ from ..extensions import db
 from ..kafka_client import publish_metric_ingest_event
 from ..models import ConfigVersion, MetricRecord, TrainingRun
 from ..redis_client import redis_get_json, redis_set_json
-from ..security import app_auth_required
+from ..security import project_auth_required
 
 agent_bp = Blueprint("agent", __name__, url_prefix="/api")
 
 
 @agent_bp.post("/agent/config/fetch")
-@app_auth_required
+@project_auth_required
 def fetch_config():
-    app = g.application
-    cache_key = f"config:active:{app.app_id}"
+    project = g.project
+    cache_key = f"config:active:{project.app_id}"
     cached = redis_get_json(cache_key)
     if cached is not None:
         return jsonify({"code": 0, "data": {"config": cached, "from_cache": True}})
 
     active = (
-        ConfigVersion.query.filter_by(app_id=app.id, is_active=True)
+        ConfigVersion.query.filter_by(app_id=project.id, is_active=True)
         .order_by(ConfigVersion.id.desc())
         .first()
     )
@@ -33,9 +33,9 @@ def fetch_config():
 
 
 @agent_bp.post("/metrics/ingest")
-@app_auth_required
+@project_auth_required
 def ingest_metrics():
-    app = g.application
+    project = g.project
     payload = request.get_json() or {}
     if not isinstance(payload, dict):
         return jsonify({"message": "payload must be JSON object"}), 400
@@ -43,9 +43,9 @@ def ingest_metrics():
     train_id = payload.get("train_id") or "default"
     now = datetime.now(timezone.utc)
 
-    run = TrainingRun.query.filter_by(app_id=app.id, train_id=train_id).first()
+    run = TrainingRun.query.filter_by(app_id=project.id, train_id=train_id).first()
     if not run:
-        run = TrainingRun(app_id=app.id, train_id=train_id, first_seen_at=now, last_seen_at=now)
+        run = TrainingRun(app_id=project.id, train_id=train_id, first_seen_at=now, last_seen_at=now)
         db.session.add(run)
         db.session.flush()
     else:
@@ -57,8 +57,8 @@ def ingest_metrics():
     db.session.flush()
 
     event = {
-        "app_pk": app.id,
-        "app_id": app.app_id,
+        "project_pk": project.id,
+        "project_id": project.app_id,
         "run_id": run.id,
         "record_id": record.id,
         "train_id": run.train_id,
@@ -67,7 +67,7 @@ def ingest_metrics():
     }
 
     try:
-        delivery = publish_metric_ingest_event(event=event, key=f"{app.app_id}:{run.train_id}")
+        delivery = publish_metric_ingest_event(event=event, key=f"{project.app_id}:{run.train_id}")
     except Exception as exc:
         db.session.rollback()
         return jsonify({"message": "failed to publish metric event", "detail": str(exc)}), 503

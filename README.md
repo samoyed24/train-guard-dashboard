@@ -81,17 +81,17 @@ VITE_API_BASE_URL=http://localhost:8000
 - `POST /api/auth/login`
 - `GET /api/auth/me`
 - `POST /api/auth/logout`
-- `GET /api/apps`
-- `POST /api/apps`
-- `GET /api/apps/:appId/configs`
-- `POST /api/apps/:appId/configs`
-- `POST /api/apps/:appId/configs/:configId/publish`
+- `GET /api/projects`
+- `POST /api/projects`
+- `GET /api/projects/:projectId/configs`
+- `POST /api/projects/:projectId/configs`
+- `POST /api/projects/:projectId/configs/:configId/publish`
 - `GET /api/dashboard/overview`
-- `GET /api/apps/:appId/runs`
-- `GET /api/apps/:appId/runs/:runId/metrics`
-- `GET /api/apps/:appId/runs/:runId/metrics/series`
+- `GET /api/projects/:projectId/runs`
+- `GET /api/projects/:projectId/runs/:runId/metrics`
+- `GET /api/projects/:projectId/runs/:runId/metrics/series`
 
-Agent 侧（app_id/app_secret 鉴权）：
+Agent 侧（project_id/project_secret 鉴权）：
 
 - `POST /api/agent/config/fetch`
 - `POST /api/metrics/ingest`
@@ -103,14 +103,14 @@ Agent 侧（app_id/app_secret 鉴权）：
 
 ## Agent 接入约定
 
-1. 在 Web 管理台创建应用，拿到 `app_id/app_secret`
+1. 在 Web 管理台创建项目，拿到 `project_id/project_secret`
 2. 在配置中心发布一个有效配置，包含 `server.url`
 3. Agent 拉取配置：
    - URL: `/api/agent/config/fetch`
-   - Header: `X-App-Id`, `X-App-Secret`
-   - Body: `{ "app_id": "...", "app_secret": "..." }`
+   - Header: `X-Project-Id`, `X-Project-Secret`
+   - Body: `{ "project_id": "...", "project_secret": "..." }`
 4. Agent 上报数据到 `server.url`（可使用 query 传鉴权）：
-   - `http://localhost:8000/api/metrics/ingest?app_id=...&app_secret=...`
+   - `http://localhost:8000/api/metrics/ingest?project_id=...&project_secret=...`
 
 ## dev 分支自动部署（镜像构建 + 开发服务器部署）
 

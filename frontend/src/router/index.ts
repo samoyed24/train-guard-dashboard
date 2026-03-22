@@ -7,6 +7,7 @@ import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import DashboardHomeView from "../views/DashboardHomeView.vue";
 import ApplicationsView from "../views/ApplicationsView.vue";
+import AccessKeysView from "../views/AccessKeysView.vue";
 import ConfigCenterView from "../views/ConfigCenterView.vue";
 import MetricsView from "../views/MetricsView.vue";
 import TeamManagementView from "../views/TeamManagementView.vue";
@@ -21,7 +22,8 @@ const routes = [
     children: [
       { path: "", redirect: "/dashboard" },
       { path: "dashboard", component: DashboardHomeView, meta: { titleKey: "routes.dashboardHome" } },
-      { path: "apps", component: ApplicationsView, meta: { titleKey: "routes.apps" } },
+      { path: "projects", component: ApplicationsView, meta: { titleKey: "routes.apps" } },
+      { path: "access-keys", component: AccessKeysView, meta: { titleKey: "routes.accessKeys" } },
       { path: "team", component: TeamManagementView, meta: { titleKey: "routes.team" } },
       { path: "configs", component: ConfigCenterView, meta: { titleKey: "routes.configs" } },
       { path: "metrics", component: MetricsView, meta: { titleKey: "routes.metrics" } },

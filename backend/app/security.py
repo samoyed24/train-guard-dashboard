@@ -73,32 +73,32 @@ def auth_required(fn):
     return wrapper
 
 
-def validate_app_credentials(app_id: str, app_secret: str):
-    if not app_id or not app_secret:
+def validate_project_credentials(project_id: str, project_secret: str):
+    if not project_id or not project_secret:
         return None
-    app = Application.query.filter_by(app_id=app_id, is_active=True).first()
+    app = Application.query.filter_by(app_id=project_id, is_active=True).first()
     if not app:
         return None
-    if not check_password_hash(app.app_secret_hash, app_secret):
+    if not check_password_hash(app.app_secret_hash, project_secret):
         return None
     return app
 
 
-def app_auth_required(fn):
+def project_auth_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        app_id = request.headers.get("X-App-Id") or request.args.get("app_id")
-        app_secret = request.headers.get("X-App-Secret") or request.args.get("app_secret")
+        project_id = request.headers.get("X-Project-Id") or request.args.get("project_id")
+        project_secret = request.headers.get("X-Project-Secret") or request.args.get("project_secret")
 
         body = request.get_json(silent=True) or {}
-        app_id = app_id or body.get("app_id")
-        app_secret = app_secret or body.get("app_secret")
+        project_id = project_id or body.get("project_id")
+        project_secret = project_secret or body.get("project_secret")
 
-        app = validate_app_credentials(app_id, app_secret)
+        app = validate_project_credentials(project_id, project_secret)
         if not app:
-            return jsonify({"message": "Invalid app credentials"}), 401
+            return jsonify({"message": "Invalid project credentials"}), 401
 
-        g.application = app
+        g.project = app
         return fn(*args, **kwargs)
 
     return wrapper

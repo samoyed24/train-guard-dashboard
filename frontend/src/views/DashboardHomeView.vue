@@ -16,7 +16,7 @@
       <div class="overview-stats">
         <div class="overview-stat-pill">
           <span>{{ t("dashboard.appsTotal") }}</span>
-          <strong>{{ apps.length }}</strong>
+          <strong>{{ projects.length }}</strong>
         </div>
         <div class="overview-stat-pill">
           <span>{{ t("dashboard.runsTotal") }}</span>
@@ -38,16 +38,16 @@
         <div class="overview-col overview-col--apps">
           <div class="panel-head">
             <div>
-              <p class="panel-kicker">Top Apps</p>
+              <p class="panel-kicker">Top Projects</p>
               <h3>{{ t("dashboard.topApps") }}</h3>
             </div>
           </div>
 
-          <div class="app-rank-list" v-if="appRunStats.length">
-            <div class="app-rank-item" v-for="item in appRunStats" :key="item.appPk">
+          <div class="app-rank-list" v-if="projectRunStats.length">
+            <div class="app-rank-item" v-for="item in projectRunStats" :key="item.projectPk">
               <div class="app-rank-head">
                 <strong>{{ item.name }}</strong>
-                <span class="mono-text">{{ item.appId }}</span>
+                <span class="mono-text">{{ item.projectId }}</span>
                 <em>{{ item.runCount }} Runs</em>
               </div>
               <div class="app-rank-bar">
@@ -70,7 +70,7 @@
                 </el-tooltip>
               </div>
             </div>
-            <el-button class="ghost-btn" size="small" @click="goApps">{{ t("dashboard.manageApps") }}</el-button>
+            <el-button class="ghost-btn" size="small" @click="goProjects">{{ t("dashboard.manageApps") }}</el-button>
           </div>
 
           <el-table
@@ -80,7 +80,7 @@
             :empty-text="t('dashboard.noRunData')"
             @row-click="onSelectRun"
           >
-            <el-table-column prop="appName" :label="t('apps.appName')" min-width="120" />
+            <el-table-column prop="projectName" :label="t('apps.appName')" min-width="120" />
             <el-table-column prop="train_id" label="Train ID" min-width="140" />
             <el-table-column prop="last_seen_at" :label="t('dashboard.latestReport')" min-width="160">
               <template #default="scope">{{ formatDate(scope.row.last_seen_at) }}</template>
@@ -98,7 +98,7 @@
           <p class="panel-desc">
             {{
               featuredRun
-                ? t("dashboard.currentRun", { appName: featuredRun.appName, trainId: featuredRun.train_id })
+                ? t("dashboard.currentRun", { appName: featuredRun.projectName, trainId: featuredRun.train_id })
                 : t("dashboard.noRunToShow")
             }}
           </p>
@@ -171,7 +171,7 @@ import http from "../api/http";
 interface AppItem {
   id: number;
   name: string;
-  app_id: string;
+  project_id: string;
   created_at: string;
 }
 
@@ -183,9 +183,9 @@ interface RunItem {
 }
 
 interface DashboardRunItem extends RunItem {
-  appPk: number;
-  appName: string;
-  appId: string;
+  projectPk: number;
+  projectName: string;
+  projectId: string;
 }
 
 interface MetricSeriesPoint {
@@ -208,9 +208,9 @@ interface ChartPoint {
 }
 
 interface AppRunStat {
-  appPk: number;
+  projectPk: number;
   name: string;
-  appId: string;
+  projectId: string;
   runCount: number;
   ratio: number;
 }
@@ -226,7 +226,7 @@ const pulsePaddingY = 20;
 const loadingOverview = ref(false);
 const loadingFeature = ref(false);
 
-const apps = ref<AppItem[]>([]);
+const projects = ref<AppItem[]>([]);
 const allRuns = ref<DashboardRunItem[]>([]);
 
 const featuredRun = ref<DashboardRunItem | null>(null);
@@ -249,26 +249,26 @@ const latestReportLabel = computed(() => {
   return latest ? formatRelativeTime(latest) : "-";
 });
 
-const appRunStats = computed<AppRunStat[]>(() => {
+const projectRunStats = computed<AppRunStat[]>(() => {
   if (!allRuns.value.length) {
     return [];
   }
 
   const runCountMap = new Map<number, number>();
   for (const run of allRuns.value) {
-    runCountMap.set(run.appPk, (runCountMap.get(run.appPk) ?? 0) + 1);
+    runCountMap.set(run.projectPk, (runCountMap.get(run.projectPk) ?? 0) + 1);
   }
 
   const values = Array.from(runCountMap.values());
   const maxRuns = values.length ? Math.max(...values) : 1;
 
-  return apps.value
-    .map((app) => {
-      const runCount = runCountMap.get(app.id) ?? 0;
+  return projects.value
+    .map((project) => {
+      const runCount = runCountMap.get(project.id) ?? 0;
       return {
-        appPk: app.id,
-        name: app.name,
-        appId: app.app_id,
+        projectPk: project.id,
+        name: project.name,
+        projectId: project.project_id,
         runCount,
         ratio: runCount <= 0 ? 0 : Math.max(8, Math.round((runCount / maxRuns) * 100)),
       };
@@ -323,8 +323,8 @@ const pulseGridLines = computed(() => {
 const loadOverview = async () => {
   loadingOverview.value = true;
   try {
-    const { data } = await http.get<AppItem[]>("/api/apps");
-    apps.value = data;
+    const { data } = await http.get<AppItem[]>("/api/projects");
+    projects.value = data;
 
     if (!data.length) {
       allRuns.value = [];
@@ -333,15 +333,15 @@ const loadOverview = async () => {
     }
 
     const groupedRuns = await Promise.all(
-      data.map(async (app) => {
+      data.map(async (project) => {
         try {
-          const response = await http.get<RunItem[]>(`/api/apps/${app.id}/runs`);
+          const response = await http.get<RunItem[]>(`/api/projects/${project.id}/runs`);
           return response.data.map(
             (run): DashboardRunItem => ({
               ...run,
-              appPk: app.id,
-              appName: app.name,
-              appId: app.app_id,
+              projectPk: project.id,
+              projectName: project.name,
+              projectId: project.project_id,
             }),
           );
         } catch {
@@ -376,7 +376,7 @@ const loadFeaturedMetric = async (run: DashboardRunItem) => {
 
   loadingFeature.value = true;
   try {
-    const { data } = await http.get<MetricSeriesResponse>(`/api/apps/${run.appPk}/runs/${run.id}/metrics/series?limit=80`);
+    const { data } = await http.get<MetricSeriesResponse>(`/api/projects/${run.projectPk}/runs/${run.id}/metrics/series?limit=80`);
     featuredMetricName.value = data.selected_metric || "";
 
     featuredMetricPoints.value = (Array.isArray(data.points) ? data.points : [])
@@ -409,8 +409,8 @@ const goMetrics = () => {
   router.push("/metrics");
 };
 
-const goApps = () => {
-  router.push("/apps");
+const goProjects = () => {
+  router.push("/projects");
 };
 
 const toTimestamp = (value: string): number => {

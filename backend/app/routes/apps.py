@@ -10,14 +10,14 @@ from ..redis_client import redis_set_json
 from ..security import auth_required
 from ..timeseries import backfill_metric_series_for_run
 
-apps_bp = Blueprint("apps", __name__, url_prefix="/api/apps")
+apps_bp = Blueprint("apps", __name__, url_prefix="/api/projects")
 
 
 def _app_to_dict(app: Application):
     return {
         "id": app.id,
         "name": app.name,
-        "app_id": app.app_id,
+        "project_id": app.app_id,
         "is_active": app.is_active,
         "created_at": app.created_at.isoformat(),
     }
@@ -46,19 +46,19 @@ def create_app():
     if not name:
         return jsonify({"message": "name required"}), 400
 
-    app_id = f"app_{secrets.token_hex(8)}"
-    app_secret = f"sec_{secrets.token_hex(16)}"
+    project_id = f"project_{secrets.token_hex(8)}"
+    project_secret = f"secret_{secrets.token_hex(16)}"
     app = Application(
         name=name,
-        app_id=app_id,
-        app_secret_hash=generate_password_hash(app_secret),
+        app_id=project_id,
+        app_secret_hash=generate_password_hash(project_secret),
         created_by=g.user.id,
     )
     db.session.add(app)
     db.session.commit()
 
     result = _app_to_dict(app)
-    result["app_secret"] = app_secret
+    result["project_secret"] = project_secret
     return jsonify(result), 201
 
 

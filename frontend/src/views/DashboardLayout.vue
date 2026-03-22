@@ -9,7 +9,8 @@
 
       <el-menu class="nav-menu" :default-active="route.path" router>
         <el-menu-item index="/dashboard">{{ t("routes.dashboardHome") }}</el-menu-item>
-        <el-menu-item index="/apps">{{ t("routes.apps") }}</el-menu-item>
+        <el-menu-item index="/projects">{{ t("routes.apps") }}</el-menu-item>
+        <el-menu-item index="/access-keys">{{ t("routes.accessKeys") }}</el-menu-item>
         <el-menu-item index="/team">{{ t("routes.team") }}</el-menu-item>
         <el-menu-item index="/configs">{{ t("routes.configs") }}</el-menu-item>
         <el-menu-item index="/metrics">{{ t("routes.metrics") }}</el-menu-item>

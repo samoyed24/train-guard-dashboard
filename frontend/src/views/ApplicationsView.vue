@@ -3,7 +3,7 @@
     <section class="card">
       <div class="panel-head">
         <div>
-          <p class="panel-kicker">Applications</p>
+          <p class="panel-kicker">Projects</p>
           <h3>{{ t("apps.title") }}</h3>
           <p class="panel-desc">{{ t("apps.desc") }}</p>
         </div>
@@ -13,11 +13,11 @@
       <div class="stat-strip">
         <div class="stat-pill">
           <span>{{ t("apps.appTotal") }}</span>
-          <strong>{{ apps.length }}</strong>
+          <strong>{{ projects.length }}</strong>
         </div>
         <div class="stat-pill">
           <span>{{ t("apps.latestAppId") }}</span>
-          <strong class="mono-text">{{ latestAppId }}</strong>
+          <strong class="mono-text">{{ latestProjectId }}</strong>
         </div>
         <div class="stat-pill">
           <span>{{ t("apps.credentialStatus") }}</span>
@@ -25,12 +25,12 @@
         </div>
       </div>
 
-      <el-table class="data-table" :data="apps" border :empty-text="t('apps.noApps')">
+      <el-table class="data-table" :data="projects" border :empty-text="t('apps.noApps')">
         <el-table-column prop="id" :label="t('apps.id')" width="70" />
         <el-table-column prop="name" :label="t('apps.appName')" min-width="160" />
-        <el-table-column prop="app_id" :label="t('apps.appId')" min-width="220">
+        <el-table-column prop="project_id" :label="t('apps.appId')" min-width="220">
           <template #default="scope">
-            <span class="mono-text">{{ scope.row.app_id }}</span>
+            <span class="mono-text">{{ scope.row.project_id }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="created_at" :label="t('apps.createdAt')" min-width="180">
@@ -67,16 +67,16 @@ import { useI18n } from "vue-i18n";
 import http from "../api/http";
 
 const { t } = useI18n();
-const apps = ref<any[]>([]);
+const projects = ref<any[]>([]);
 const visible = ref(false);
 const secretVisible = ref(false);
 const latestSecret = ref("");
 const form = reactive({ name: "" });
-const latestAppId = computed(() => apps.value[0]?.app_id || "--");
+const latestProjectId = computed(() => projects.value[0]?.project_id || "--");
 
-const loadApps = async () => {
-  const { data } = await http.get("/api/apps");
-  apps.value = data;
+const loadProjects = async () => {
+  const { data } = await http.get("/api/projects");
+  projects.value = data;
 };
 
 const formatDate = (value: string) => {
@@ -97,15 +97,22 @@ const create = async () => {
   }
 
   try {
-    const { data } = await http.post("/api/apps", { name });
-    latestSecret.value = JSON.stringify({ app_id: data.app_id, app_secret: data.app_secret }, null, 2);
+    const { data } = await http.post("/api/projects", { name });
+    latestSecret.value = JSON.stringify(
+      {
+        project_id: data.project_id,
+        project_secret: data.project_secret,
+      },
+      null,
+      2,
+    );
     secretVisible.value = true;
     visible.value = false;
-    await loadApps();
+    await loadProjects();
   } catch (e: any) {
     ElMessage.error(e?.response?.data?.message || t("apps.createFailed"));
   }
 };
 
-onMounted(loadApps);
+onMounted(loadProjects);
 </script>

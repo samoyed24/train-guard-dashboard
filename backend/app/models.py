@@ -28,6 +28,19 @@ class Application(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
 
+class AccessKey(db.Model):
+    __tablename__ = "access_keys"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    name = db.Column(db.String(120), nullable=False)
+    access_key_id = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    secret_key_hash = db.Column(db.String(255), nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    last_used_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
 class ConfigVersion(db.Model):
     __tablename__ = "config_versions"
 

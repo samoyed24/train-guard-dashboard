@@ -10,13 +10,13 @@
       </div>
 
       <div class="panel-meta">
-        <span class="info-chip" v-if="selectedApp">{{ t("configs.currentApp", { name: selectedApp.name }) }}</span>
+        <span class="info-chip" v-if="selectedProject">{{ t("configs.currentApp", { name: selectedProject.name }) }}</span>
         <span class="info-chip">{{ t("configs.versionCount", { count: configs.length }) }}</span>
         <span class="info-chip">{{ t("configs.activeVersion", { version: activeConfigVersionLabel }) }}</span>
       </div>
 
-      <el-select v-model="selectedAppId" :placeholder="t('configs.selectApp')" class="app-select" @change="onChangeApp">
-        <el-option v-for="item in apps" :key="item.id" :label="item.name + ' (' + item.app_id + ')'" :value="item.id" />
+      <el-select v-model="selectedProjectId" :placeholder="t('configs.selectApp')" class="app-select" @change="onChangeProject">
+        <el-option v-for="item in projects" :key="item.id" :label="item.name + ' (' + item.project_id + ')'" :value="item.id" />
       </el-select>
 
       <div class="editor-wrap">
@@ -109,7 +109,7 @@ import http from "../api/http";
 interface AppItem {
   id: number;
   name: string;
-  app_id: string;
+  project_id: string;
 }
 
 interface ConfigVersion {
@@ -146,12 +146,12 @@ interface ConfigPayload {
   };
 }
 
-const apps = ref<AppItem[]>([]);
+const projects = ref<AppItem[]>([]);
 const { t } = useI18n();
-const selectedAppId = ref<number | null>(null);
+const selectedProjectId = ref<number | null>(null);
 const configs = ref<ConfigVersion[]>([]);
 const configForm = reactive<ConfigFormModel>(createTemplateForm());
-const selectedApp = computed(() => apps.value.find((item) => item.id === selectedAppId.value) || null);
+const selectedProject = computed(() => projects.value.find((item) => item.id === selectedProjectId.value) || null);
 const activeConfigVersionLabel = computed(() => {
   const active = configs.value.find((item) => item.is_active);
   return active ? `v${active.version}` : "-";
@@ -261,42 +261,42 @@ const buildPayload = (): ConfigPayload => {
   };
 };
 
-const loadApps = async () => {
-  const { data } = await http.get<AppItem[]>("/api/apps");
-  apps.value = data;
+const loadProjects = async () => {
+  const { data } = await http.get<AppItem[]>("/api/projects");
+  projects.value = data;
 
   if (!data.length) {
-    selectedAppId.value = null;
+    selectedProjectId.value = null;
     configs.value = [];
     fillTemplate();
     return;
   }
 
-  const hasCurrent = selectedAppId.value ? data.some((item) => item.id === selectedAppId.value) : false;
+  const hasCurrent = selectedProjectId.value ? data.some((item) => item.id === selectedProjectId.value) : false;
   if (!hasCurrent) {
-    selectedAppId.value = data[0].id;
+    selectedProjectId.value = data[0].id;
   }
 
-  await onChangeApp();
+  await onChangeProject();
 };
 
 const loadConfigs = async () => {
-  if (!selectedAppId.value) {
+  if (!selectedProjectId.value) {
     configs.value = [];
     return;
   }
 
-  const { data } = await http.get<ConfigVersion[]>(`/api/apps/${selectedAppId.value}/configs`);
+  const { data } = await http.get<ConfigVersion[]>(`/api/projects/${selectedProjectId.value}/configs`);
   configs.value = data;
 };
 
-const onChangeApp = async () => {
+const onChangeProject = async () => {
   await loadConfigs();
   syncFormFromCurrentConfigs();
 };
 
 const saveVersion = async () => {
-  if (!selectedAppId.value) {
+  if (!selectedProjectId.value) {
     ElMessage.warning(t("configs.selectAppFirst"));
     return;
   }
@@ -309,7 +309,7 @@ const saveVersion = async () => {
 
   try {
     const content = buildPayload();
-    await http.post(`/api/apps/${selectedAppId.value}/configs`, { content });
+    await http.post(`/api/projects/${selectedProjectId.value}/configs`, { content });
     ElMessage.success(t("configs.versionSaved"));
     await loadConfigs();
   } catch (e: any) {
@@ -318,9 +318,9 @@ const saveVersion = async () => {
 };
 
 const publish = async (id: number) => {
-  if (!selectedAppId.value) return;
+  if (!selectedProjectId.value) return;
   try {
-    await http.post(`/api/apps/${selectedAppId.value}/configs/${id}/publish`);
+    await http.post(`/api/projects/${selectedProjectId.value}/configs/${id}/publish`);
     ElMessage.success(t("configs.published"));
     await loadConfigs();
   } catch {
@@ -330,6 +330,6 @@ const publish = async (id: number) => {
 
 onMounted(async () => {
   fillTemplate();
-  await loadApps();
+  await loadProjects();
 });
 </script>

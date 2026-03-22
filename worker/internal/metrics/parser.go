@@ -10,7 +10,7 @@ import (
 )
 
 var ignoredMetricKeys = map[string]struct{}{
-	"train_id":   {},
+	"train_id":    {},
 	"step":       {},
 	"global_step": {},
 	"epoch":      {},
@@ -18,11 +18,13 @@ var ignoredMetricKeys = map[string]struct{}{
 	"time":       {},
 	"created_at": {},
 	"updated_at": {},
+	"project_id": {},
+	"project_secret": {},
 }
 
 type Event struct {
-	AppPK      int64                  `json:"app_pk"`
-	AppID      string                 `json:"app_id"`
+	ProjectPK  int64                  `json:"project_pk"`
+	ProjectID  string                 `json:"project_id"`
 	RunID      int64                  `json:"run_id"`
 	RecordID   int64                  `json:"record_id"`
 	TrainID    string                 `json:"train_id"`
