@@ -1,6 +1,6 @@
 # Train Guard Dashboard Backend
 
-技术栈：Flask + PostgreSQL + Redis
+技术栈：Flask + PostgreSQL + Redis + Kafka
 
 依赖管理：uv（`pyproject.toml`）
 
@@ -10,9 +10,17 @@
 - 应用管理（生成 app_id/app_secret）
 - Web 配置中心（配置版本、发布激活）
 - 配置分发（`/api/agent/config/fetch`）
-- 训练指标上报（`/api/metrics/ingest`）
+- 训练指标上报（`/api/metrics/ingest`，写入 Kafka）
 - 指标查询（按 app/run）
 - 指标时序点存储与按指标曲线查询
+
+## 指标链路
+
+- `POST /api/metrics/ingest` 接口会：
+  - 校验应用凭证
+  - 更新 `training_runs` / `metric_records`
+  - 将原始事件发布到 Kafka（默认 topic：`train-guard.metrics.ingest`）
+- 建议由独立消费者服务消费 Kafka 并写入时序表。
 
 ## 启动
 
@@ -47,6 +55,12 @@ uv run python run.py
   - `EMAIL_CODE_TTL_SECONDS`
   - `EMAIL_CODE_COOLDOWN_SECONDS`
   - `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` / `SMTP_USE_TLS` / `SMTP_FROM_EMAIL`
+  - `KAFKA_BOOTSTRAP_SERVERS`
+  - `KAFKA_METRICS_TOPIC`
+  - `KAFKA_PRODUCER_ACKS`
+  - `KAFKA_PRODUCER_LINGER_MS`
+  - `KAFKA_PRODUCER_RETRIES`
+  - `KAFKA_SEND_TIMEOUT_SECONDS`
 
 ## 常用 uv 命令
 
@@ -75,6 +89,23 @@ uv sync
 - `POST /api/agent/config/fetch`（Agent 用）
 - `POST /api/metrics/ingest`（Agent 用）
 - `GET /api/apps/:appId/runs/:runId/metrics/series`
+
+`POST /api/metrics/ingest` 成功返回示例（202）：
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "run_id": 12,
+  "record_id": 1288,
+  "queued": true,
+  "kafka": {
+    "topic": "train-guard.metrics.ingest",
+    "partition": 0,
+    "offset": 12345
+  }
+}
+```
 
 `init-db` 会在建表后尝试启用 TimescaleDB（hypertable）。
 若数据库未安装 TimescaleDB 扩展，会自动回退到普通 PostgreSQL 表存储时序点。

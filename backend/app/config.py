@@ -18,3 +18,11 @@ class Config:
     SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USERNAME)
     JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRES_MINUTES", "120"))
     CORS_ORIGINS = [x.strip() for x in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if x.strip()]
+    KAFKA_BOOTSTRAP_SERVERS = [
+        x.strip() for x in os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092").split(",") if x.strip()
+    ]
+    KAFKA_METRICS_TOPIC = os.getenv("KAFKA_METRICS_TOPIC", "train-guard.metrics.ingest")
+    KAFKA_PRODUCER_ACKS = os.getenv("KAFKA_PRODUCER_ACKS", "1")
+    KAFKA_PRODUCER_LINGER_MS = int(os.getenv("KAFKA_PRODUCER_LINGER_MS", "10"))
+    KAFKA_PRODUCER_RETRIES = int(os.getenv("KAFKA_PRODUCER_RETRIES", "3"))
+    KAFKA_SEND_TIMEOUT_SECONDS = float(os.getenv("KAFKA_SEND_TIMEOUT_SECONDS", "3"))

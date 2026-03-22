@@ -12,7 +12,7 @@
 技术栈：
 
 - Frontend: Vue 3 + Element Plus + pnpm + Vite
-- Backend: Python + Flask + PostgreSQL + Redis
+- Backend: Python + Flask + PostgreSQL + Redis + Kafka
 
 ## 在线试用
 
@@ -96,6 +96,11 @@ Agent 侧（app_id/app_secret 鉴权）：
 - `POST /api/agent/config/fetch`
 - `POST /api/metrics/ingest`
 
+指标上报链路说明：
+
+- `POST /api/metrics/ingest`：后端接收后写入 Kafka（默认 topic：`train-guard.metrics.ingest`）
+- 下游消费服务负责将指标事件落库到时序表（可按业务独立扩容）
+
 ## Agent 接入约定
 
 1. 在 Web 管理台创建应用，拿到 `app_id/app_secret`
@@ -139,6 +144,9 @@ Agent 侧（app_id/app_secret 鉴权）：
 - `DEV_POSTGRES_USER`：数据库用户（可选，默认 `postgres`）
 - `DEV_POSTGRES_IMAGE`：PostgreSQL 镜像（建议填你 ACR 内的镜像）
 - `DEV_REDIS_IMAGE`：Redis 镜像（建议填你 ACR 内的镜像）
+- `DEV_KAFKA_IMAGE`：Kafka 镜像（可选，默认 `bitnami/kafka:3.7`）
+- `DEV_KAFKA_BOOTSTRAP_SERVERS`：后端连接 Kafka 地址（可选，默认 `kafka:9092`）
+- `DEV_KAFKA_METRICS_TOPIC`：指标 topic（可选，默认 `train-guard.metrics.ingest`）
 - `DEV_FRONTEND_PORT`：前端对外端口（可选，默认 `80`）
 - `DEV_BACKEND_PORT`：后端对外端口（可选，默认 `8000`）
 - `DEV_JWT_EXPIRES_MINUTES`：JWT 过期时间（可选，默认 `120`）

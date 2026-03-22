@@ -3,10 +3,10 @@ from datetime import datetime, timezone
 from flask import Blueprint, g, jsonify, request
 
 from ..extensions import db
+from ..kafka_client import publish_metric_ingest_event
 from ..models import ConfigVersion, MetricRecord, TrainingRun
 from ..redis_client import redis_get_json, redis_set_json
 from ..security import app_auth_required
-from ..timeseries import append_metric_series_points
 
 agent_bp = Blueprint("agent", __name__, url_prefix="/api")
 
@@ -53,7 +53,25 @@ def ingest_metrics():
 
     record = MetricRecord(run_id=run.id, payload=payload)
     db.session.add(record)
-    written = append_metric_series_points(run_id=run.id, payload=payload, event_time=now)
+
+    db.session.flush()
+
+    event = {
+        "app_pk": app.id,
+        "app_id": app.app_id,
+        "run_id": run.id,
+        "record_id": record.id,
+        "train_id": run.train_id,
+        "received_at": now.isoformat(),
+        "payload": payload,
+    }
+
+    try:
+        delivery = publish_metric_ingest_event(event=event, key=f"{app.app_id}:{run.train_id}")
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"message": "failed to publish metric event", "detail": str(exc)}), 503
+
     db.session.commit()
 
     return jsonify(
@@ -62,6 +80,7 @@ def ingest_metrics():
             "message": "ok",
             "run_id": run.id,
             "record_id": record.id,
-            "series_points_written": written,
+            "queued": True,
+            "kafka": delivery,
         }
     ), 202

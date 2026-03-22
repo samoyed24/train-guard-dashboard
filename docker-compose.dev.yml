@@ -15,17 +15,37 @@ services:
     volumes:
       - redis_data:/data
 
+  kafka:
+    image: ${KAFKA_IMAGE:-bitnami/kafka:3.7}
+    restart: always
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_KRAFT_CLUSTER_ID: ${KAFKA_KRAFT_CLUSTER_ID:-MkU3OEVBNTcwNTJENDM2Qk}
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    volumes:
+      - kafka_data:/bitnami/kafka
+
   backend:
     image: ${BACKEND_IMAGE}
     restart: always
     depends_on:
       - db
       - redis
+      - kafka
     environment:
       SECRET_KEY: ${SECRET_KEY}
       JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-120}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-train_guard}
       REDIS_URL: redis://redis:6379/0
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+      KAFKA_METRICS_TOPIC: ${KAFKA_METRICS_TOPIC:-train-guard.metrics.ingest}
       CORS_ORIGINS: ${CORS_ORIGINS}
       FLASK_DEBUG: ${FLASK_DEBUG:-0}
       EMAIL_CODE_TTL_SECONDS: ${EMAIL_CODE_TTL_SECONDS:-300}
@@ -50,3 +70,4 @@ services:
 volumes:
   pg_data:
   redis_data:
+  kafka_data:

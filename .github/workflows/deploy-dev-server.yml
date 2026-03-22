@@ -141,6 +141,9 @@ jobs:
           FRONTEND_IMAGE=${{ env.FRONTEND_IMAGE_REPO }}:dev
           POSTGRES_IMAGE=${{ secrets.DEV_POSTGRES_IMAGE }}
           REDIS_IMAGE=${{ secrets.DEV_REDIS_IMAGE }}
+          KAFKA_IMAGE=${{ secrets.DEV_KAFKA_IMAGE || 'bitnami/kafka:3.7' }}
+          KAFKA_BOOTSTRAP_SERVERS=${{ secrets.DEV_KAFKA_BOOTSTRAP_SERVERS || 'kafka:9092' }}
+          KAFKA_METRICS_TOPIC=${{ secrets.DEV_KAFKA_METRICS_TOPIC || 'train-guard.metrics.ingest' }}
 
           FRONTEND_PORT=${{ secrets.DEV_FRONTEND_PORT }}
           BACKEND_PORT=${{ secrets.DEV_BACKEND_PORT }}
