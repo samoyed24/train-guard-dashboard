@@ -1716,6 +1716,11 @@ a {
   min-width: 0;
   display: grid;
   gap: 10px;
+  width: 100%;
+}
+
+.dashboard-content .page-wrap {
+  max-width: none;
 }
 
 .dashboard-breadcrumb-wrap {
