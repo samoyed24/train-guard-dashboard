@@ -15,7 +15,8 @@ import (
 )
 
 type Consumer struct {
-	client       *redis.Client
+	reader       *redis.Client
+	acker        *redis.Client
 	streamKey    string
 	group        string
 	consumer     string
@@ -29,9 +30,11 @@ func New(cfg config.Config, store *store.Store) (*Consumer, error) {
 		return nil, err
 	}
 
-	client := redis.NewClient(opts)
+	reader := redis.NewClient(opts)
+	acker := redis.NewClient(opts)
 	consumer := &Consumer{
-		client:    client,
+		reader:    reader,
+		acker:     acker,
 		streamKey: cfg.MetricsStreamKey,
 		group:     cfg.MetricsConsumerGroup,
 		consumer:  cfg.MetricsConsumerName,
@@ -40,7 +43,8 @@ func New(cfg config.Config, store *store.Store) (*Consumer, error) {
 	}
 
 	if err := consumer.ensureGroup(context.Background()); err != nil {
-		client.Close()
+		reader.Close()
+		acker.Close()
 		return nil, err
 	}
 
@@ -48,10 +52,11 @@ func New(cfg config.Config, store *store.Store) (*Consumer, error) {
 }
 
 func (c *Consumer) Run(ctx context.Context) error {
-	defer c.client.Close()
+	defer c.reader.Close()
+	defer c.acker.Close()
 
 	for {
-		result, err := c.client.XReadGroup(ctx, &redis.XReadGroupArgs{
+		result, err := c.reader.XReadGroup(ctx, &redis.XReadGroupArgs{
 			Group:    c.group,
 			Consumer: c.consumer,
 			Streams:  []string{c.streamKey, ">"},
@@ -81,10 +86,10 @@ func (c *Consumer) Run(ctx context.Context) error {
 					continue
 				}
 
-				if err := c.client.XAck(ctx, c.streamKey, c.group, message.ID).Err(); err != nil {
+				if err := c.acker.XAck(ctx, c.streamKey, c.group, message.ID).Err(); err != nil {
 					return err
 				}
-				if err := c.client.XDel(ctx, c.streamKey, message.ID).Err(); err != nil {
+				if err := c.acker.XDel(ctx, c.streamKey, message.ID).Err(); err != nil {
 					return err
 				}
 			}
@@ -93,7 +98,7 @@ func (c *Consumer) Run(ctx context.Context) error {
 }
 
 func (c *Consumer) ensureGroup(ctx context.Context) error {
-	err := c.client.XGroupCreateMkStream(ctx, c.streamKey, c.group, "$").Err()
+	err := c.acker.XGroupCreateMkStream(ctx, c.streamKey, c.group, "$").Err()
 	if err == nil || strings.Contains(err.Error(), "BUSYGROUP") {
 		return nil
 	}
