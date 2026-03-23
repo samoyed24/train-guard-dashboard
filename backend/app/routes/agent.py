@@ -106,13 +106,22 @@ def ingest_metrics():
         "payload": payload,
     }
 
+    db.session.commit()
+
     try:
         delivery = publish_metric_ingest_event(event=event, key=f"{project.app_id}:{run.train_id}")
     except Exception as exc:
-        db.session.rollback()
-        return jsonify({"message": "failed to publish metric event", "detail": str(exc)}), 503
-
-    db.session.commit()
+        current_app.logger.warning("failed to enqueue metric event after db commit: %s", exc)
+        return jsonify(
+            {
+                "code": 0,
+                "message": "ok",
+                "run_id": run.id,
+                "record_id": record.id,
+                "queued": False,
+                "queue_error": str(exc),
+            }
+        ), 202
 
     return jsonify(
         {

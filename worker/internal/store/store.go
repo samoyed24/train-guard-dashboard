@@ -57,12 +57,16 @@ func (s *Store) InsertMetricSeriesPoints(ctx context.Context, points []metrics.P
 	}
 
 	results := tx.SendBatch(ctx, batch)
-	defer results.Close()
 
 	for range points {
 		if _, err := results.Exec(); err != nil {
+			results.Close()
 			return err
 		}
+	}
+
+	if err := results.Close(); err != nil {
+		return err
 	}
 
 	return tx.Commit(ctx)
